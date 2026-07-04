@@ -1,0 +1,20 @@
+"use client";
+import { useState, useEffect } from "react";
+import { Users, Upload, ArrowUpFromLine, Headphones, Coins, TrendingUp, Activity, DollarSign, FileText, CreditCard, CheckCircle, XCircle, Clock, UserPlus } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import AdminLayout from "@/components/layout/AdminLayout";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { createClient } from "@/lib/supabase/client";
+import { formatCurrency, formatDateTime, getStatusLabel } from "@/lib/utils";
+import type { AdminLog, Commission, Profile } from "@/types";
+const supabase = createClient();
+
+interface AdminStats {
+  total_users: number; pending_uploads: number; pending_withdrawals: number;
+  open_tickets: number; total_commissions: number; users_today: number;
+  commissions_today: number; validated_today: number;
+  monthly_commissions: { month: string; amount: number; count: number }[];
+  recent_logs: AdminLog[];
+  recent_commissions: (Commission & { user?: Profile })[];
+}

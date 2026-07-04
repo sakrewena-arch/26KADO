@@ -1,0 +1,1 @@
+const fs=require("fs");const path=require("path");const base="c:\\\\Users\\\\DG\\\\Desktop\\\\26kdo\\\\src\\\\app\\\\admin";function w(r,c2){const f=path.join(base,r);const d=path.dirname(f);if(!fs.existsSync(d))fs.mkdirSync(d,{recursive:true});fs.writeFileSync(f,c2,"utf8");console.log("OK:"+r);}

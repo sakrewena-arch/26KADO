@@ -1,0 +1,16 @@
+{
+  "name": "26KADO",
+  "short_name": "26KADO",
+  "description": "Le meilleur programme d'affiliation des bookmakers en Afrique",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a1a",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}
