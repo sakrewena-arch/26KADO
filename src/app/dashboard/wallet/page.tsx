@@ -8,11 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useWallet } from "@/hooks/useWallet";
+import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Wallet, ArrowUpFromLine, Plus, CreditCard } from "lucide-react";
 
 export default function WalletPage() {
   const { wallet, transactions, createWithdrawal, loading } = useWallet();
+  const { profile } = useAuth();
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("orange_money");
   const [accountInfo, setAccountInfo] = useState("");
@@ -36,7 +38,7 @@ export default function WalletPage() {
             <div>
               <p className="text-sm text-gray-400">Solde disponible</p>
               <p className="text-4xl font-bold text-white mt-1">
-                {formatCurrency(wallet?.balance || 0)}
+                {formatCurrency(profile?.total_commission || 0)}
               </p>
             </div>
             <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20">
@@ -46,11 +48,11 @@ export default function WalletPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 rounded-xl bg-white/5">
               <p className="text-xs text-gray-400">Total gagné</p>
-              <p className="text-lg font-bold text-green-400">{formatCurrency(wallet?.total_earned || 0)}</p>
+              <p className="text-lg font-bold text-green-400">{formatCurrency(profile?.total_commission || 0)}</p>
             </div>
             <div className="p-3 rounded-xl bg-white/5">
               <p className="text-xs text-gray-400">Total retiré</p>
-              <p className="text-lg font-bold text-yellow-400">{formatCurrency(wallet?.total_withdrawn || 0)}</p>
+              <p className="text-lg font-bold text-yellow-400">{formatCurrency(profile?.total_commission || 0)}</p>
             </div>
           </div>
         </Card>

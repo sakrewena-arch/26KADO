@@ -7,7 +7,8 @@ import {
   LayoutDashboard, Users, Gamepad2, Upload, Coins,
   CreditCard, ArrowUpFromLine, Headphones, HelpCircle,
   Award, BarChart3, Trophy, MessageCircle, BookOpen,
-  Bell, ScrollText, Settings, Menu, LogOut, Ticket, Newspaper
+  Bell, ScrollText, Settings, Menu, LogOut, Ticket, Newspaper,
+  ArrowDownToLine
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,6 +22,7 @@ const adminNavigation = [
   { title: "Validations", href: "/admin/validations", icon: Upload },
   { title: "Commissions", href: "/admin/commissions", icon: Coins },
   { title: "Paiements", href: "/admin/payments", icon: CreditCard },
+  { title: "Dépôt", href: "/admin/deposit", icon: ArrowDownToLine },
   { title: "Retraits", href: "/admin/withdrawals", icon: ArrowUpFromLine },
   { title: "Tickets", href: "/admin/tickets", icon: Headphones },
   { title: "Coupons", href: "/admin/coupons", icon: Ticket },

@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Coins, Wallet, Upload, Users,
   Headphones, BookOpen, Bell, Menu, X, LogOut,
-  ChevronRight
+  ChevronRight, ArrowUpFromLine
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -19,6 +19,7 @@ const navigation = [
   { title: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
   { title: "Commissions", href: "/dashboard/commissions", icon: Coins },
   { title: "Portefeuille", href: "/dashboard/wallet", icon: Wallet },
+  { title: "Retrait", href: "/dashboard/retrait", icon: ArrowUpFromLine },
   { title: "Validations", href: "/dashboard/validations", icon: Upload },
   { title: "Parrainages", href: "/dashboard/referrals", icon: Users },
   { title: "Support", href: "/dashboard/support", icon: Headphones },

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from "@/contexts/auth";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -100,13 +101,15 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="ambient-bg" />
-          <div className="grid-overlay" />
-          <div className="orb orb-1" />
-          <div className="orb orb-2" />
-          <div className="orb orb-3" />
-          {children}
-          <Toaster />
+          <AuthProvider>
+            <div className="ambient-bg" />
+            <div className="grid-overlay" />
+            <div className="orb orb-1" />
+            <div className="orb orb-2" />
+            <div className="orb orb-3" />
+            {children}
+            <Toaster />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

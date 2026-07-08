@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const stats = [
     {
       title: "Solde",
-      value: formatCurrency(wallet?.balance || 0),
+      value: formatCurrency(profile?.total_commission || 0),
       icon: Wallet,
       color: "from-blue-500/20 to-purple-500/20 text-blue-400",
       href: "/dashboard/wallet",

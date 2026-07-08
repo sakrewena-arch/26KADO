@@ -75,7 +75,104 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  width: 100%;
 }
+
+/* ===== RESPONSIVE UTILITIES ===== */
+
+/* Safe area for notched phones */
+@supports (padding: env(safe-area-inset-top)) {
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-left { padding-left: env(safe-area-inset-left); }
+  .safe-right { padding-right: env(safe-area-inset-right); }
+}
+
+/* Prevent horizontal scroll on all devices */
+html {
+  overflow-x: hidden;
+  width: 100%;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Better touch targets for mobile */
+@media (max-width: 640px) {
+  button, a, select, input, textarea {
+    min-height: 44px;
+  }
+  
+  .mobile-full {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  .mobile-stack {
+    flex-direction: column !important;
+  }
+  
+  .mobile-hide {
+    display: none !important;
+  }
+  
+  .mobile-text-sm {
+    font-size: 0.875rem !important;
+  }
+  
+  .mobile-p-3 {
+    padding: 0.75rem !important;
+  }
+  
+  .mobile-gap-2 {
+    gap: 0.5rem !important;
+  }
+  
+  .mobile-grid-1 {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .mobile-grid-2 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Small phones (320px and below) */
+@media (max-width: 360px) {
+  .xs-hide {
+    display: none !important;
+  }
+  
+  .xs-text-xs {
+    font-size: 0.75rem !important;
+  }
+  
+  .xs-p-2 {
+    padding: 0.5rem !important;
+  }
+  
+  .xs-grid-1 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Tablets */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .tablet-grid-2 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Large screens */
+@media (min-width: 1400px) {
+  .max-w-ultra {
+    max-width: 1400px !important;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* ===== END RESPONSIVE UTILITIES ===== */
 
 ::selection {
   background: rgba(16, 185, 129, 0.3);
@@ -100,7 +197,7 @@ body {
   background: var(--primary);
 }
 
-/* Background layers - z-index negatif pour être derrière le contenu */
+/* Background layers */
 .ambient-bg {
   position: fixed;
   inset: 0;
@@ -156,6 +253,12 @@ body {
   top: 40%;
   left: 60%;
   animation-delay: -14s;
+}
+
+/* Hide orbs on small screens to save performance */
+@media (max-width: 640px) {
+  .orb { display: none; }
+  .grid-overlay { background-size: 30px 30px; }
 }
 
 @keyframes ambient-glow {
@@ -266,7 +369,6 @@ select option {
   color: #ffffff;
 }
 
-/* Style pour les listes déroulantes natives */
 select {
   color-scheme: dark;
 }
@@ -292,4 +394,78 @@ option {
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
+}
+
+/* ===== RESPONSIVE FIXES FOR KEY PAGES ===== */
+
+/* Hero section responsive */
+@media (max-width: 640px) {
+  .hero-title {
+    font-size: 2.5rem !important;
+    line-height: 1.1 !important;
+  }
+  .hero-subtitle {
+    font-size: 1rem !important;
+  }
+  .hero-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+}
+
+/* Dashboard cards responsive */
+@media (max-width: 640px) {
+  .dashboard-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+  .dashboard-card {
+    padding: 0.75rem !important;
+  }
+  .dashboard-card-value {
+    font-size: 1.25rem !important;
+  }
+}
+
+/* Sidebar responsive */
+@media (max-width: 1023px) {
+  .sidebar-overlay {
+    display: block !important;
+  }
+}
+
+/* Form elements responsive */
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .form-input {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+  }
+}
+
+/* Table responsive */
+@media (max-width: 640px) {
+  .table-responsive {
+    display: block !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Modal/Dialog responsive */
+@media (max-width: 640px) {
+  .modal-content {
+    width: 95% !important;
+    max-width: 95% !important;
+    margin: 0 auto !important;
+    padding: 1rem !important;
+  }
+}
+
+/* Fix iOS input zoom */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }
