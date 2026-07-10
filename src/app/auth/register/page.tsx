@@ -174,7 +174,7 @@ function RegisterForm() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="referralCode">Code de parrainage (optionnel)</Label>
+          <Label htmlFor="referralCode">Code de parrainage (facultatif)</Label>
           <div className="relative">
             <Gift className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 shrink-0" />
             <Input

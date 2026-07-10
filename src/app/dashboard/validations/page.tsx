@@ -197,7 +197,7 @@ export default function ValidationsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Commentaires {resubmitUpload ? "(obligatoire)" : "(optionnel)"}</Label>
+              <Label>Commentaires {resubmitUpload ? "(obligatoire)" : "(facultatif)"}</Label>
               <textarea
                 className="w-full h-20 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white resize-none"
                 placeholder={resubmitUpload ? "Répondez aux questions de l'administrateur..." : "Ajoutez un commentaire..."}

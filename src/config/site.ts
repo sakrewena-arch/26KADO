@@ -107,7 +107,7 @@ export const siteConfig = {
   ],
   navigation: [
     { title: "Accueil", href: "/" },
-    { title: "Bookmakers", href: "/#bookmakers" },
+    { title: "Bookmakers", href: "/bookmakers" },
     { title: "Coupons", href: "/coupons" },
     { title: "Actu Foot", href: "/football-news" },
     { title: "À propos", href: "/about" },

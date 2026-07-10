@@ -1,19 +1,57 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Newspaper, Calendar, Clock, X, ZoomIn } from "lucide-react";
+import { Newspaper, Calendar, Clock, X, ZoomIn, AlertCircle, Filter } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { getFootballNews } from "@/lib/supabase/queries";
 import type { FootballNews } from "@/types";
+
+type FilterPeriod = "today" | "week" | "month" | "all";
+
+function isToday(dateStr: string): boolean {
+  const date = new Date(dateStr);
+  const today = new Date();
+  return (
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  );
+}
+
+function isThisWeek(dateStr: string): boolean {
+  const date = new Date(dateStr);
+  const today = new Date();
+  const weekAgo = new Date(today);
+  weekAgo.setDate(today.getDate() - 7);
+  return date >= weekAgo;
+}
+
+function isThisMonth(dateStr: string): boolean {
+  const date = new Date(dateStr);
+  const today = new Date();
+  return (
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  );
+}
+
+const filters: { key: FilterPeriod; label: string }[] = [
+  { key: "today", label: "Aujourd'hui" },
+  { key: "week", label: "Cette semaine" },
+  { key: "month", label: "Ce mois" },
+  { key: "all", label: "Tout" },
+];
 
 export default function FootballNewsPage() {
   const [news, setNews] = useState<FootballNews[]>([]);
   const [loading, setLoading] = useState(true);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [period, setPeriod] = useState<FilterPeriod>("today");
 
   useEffect(() => {
     async function load() {
@@ -28,6 +66,16 @@ export default function FootballNewsPage() {
     }
     load();
   }, []);
+
+  const filteredNews = useMemo(() => {
+    switch (period) {
+      case "today": return news.filter((item) => isToday(item.created_at));
+      case "week": return news.filter((item) => isThisWeek(item.created_at));
+      case "month": return news.filter((item) => isThisMonth(item.created_at));
+      case "all": return news;
+      default: return news;
+    }
+  }, [news, period]);
 
   return (
     <main className="min-h-screen">
@@ -71,7 +119,7 @@ export default function FootballNewsPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-12"
+            className="text-center mb-8"
           >
             <Badge variant="premium" className="mb-4 px-4 py-1.5 text-sm">
               <Newspaper className="w-4 h-4 mr-1" />
@@ -85,21 +133,42 @@ export default function FootballNewsPage() {
             </p>
           </motion.div>
 
+          {/* Filtres */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
+            <Filter className="w-4 h-4 text-gray-500" />
+            {filters.map((f) => (
+              <Button
+                key={f.key}
+                variant={period === f.key ? "premium" : "outline"}
+                size="sm"
+                onClick={() => setPeriod(f.key)}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
+
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="h-80 rounded-2xl bg-white/5 animate-pulse" />
               ))}
             </div>
-          ) : news.length === 0 ? (
+          ) : filteredNews.length === 0 ? (
             <div className="text-center py-16">
               <Newspaper className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-400">Aucune actualité</h3>
-              <p className="text-gray-500 mt-2">Revenez bientôt pour découvrir nos dernières actualités.</p>
+              <h3 className="text-xl font-semibold text-gray-400">
+                {period === "today" ? "Aucune actualité aujourd'hui" : "Aucune actualité trouvée"}
+              </h3>
+              <p className="text-gray-500 mt-2">
+                {period === "today"
+                  ? "Revenez demain pour les dernières infos."
+                  : "Aucune actualité pour cette période."}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {news.map((item, i) => (
+              {filteredNews.map((item, i) => (
                 <motion.div
                   key={item.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -123,10 +192,14 @@ export default function FootballNewsPage() {
                       </div>
                     )}
                     <div className="flex items-center gap-3 mb-3 text-xs text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-                        {new Date(item.created_at).toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" })}
-                      </span>
+                      {isToday(item.created_at) ? (
+                        <Badge variant="success" className="text-[10px]">Aujourd'hui</Badge>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                          {new Date(item.created_at).toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" })}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
                         {new Date(item.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}

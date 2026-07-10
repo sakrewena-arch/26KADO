@@ -88,10 +88,6 @@ function EarnMoneyCard({ onEarnClick }: { onEarnClick: () => void }) {
 
   const handleButtonClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!user) {
-      onEarnClick();
-      return;
-    }
     setShowDetail(true);
   };
 

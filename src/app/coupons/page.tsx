@@ -1,19 +1,57 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Ticket, Calendar, X, ZoomIn } from "lucide-react";
+import { Ticket, Calendar, X, ZoomIn, AlertCircle, Filter } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { getCoupons } from "@/lib/supabase/queries";
 import type { Coupon } from "@/types";
+
+type FilterPeriod = "today" | "week" | "month" | "all";
+
+function isToday(dateStr: string): boolean {
+  const date = new Date(dateStr);
+  const today = new Date();
+  return (
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  );
+}
+
+function isThisWeek(dateStr: string): boolean {
+  const date = new Date(dateStr);
+  const today = new Date();
+  const weekAgo = new Date(today);
+  weekAgo.setDate(today.getDate() - 7);
+  return date >= weekAgo;
+}
+
+function isThisMonth(dateStr: string): boolean {
+  const date = new Date(dateStr);
+  const today = new Date();
+  return (
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  );
+}
+
+const filters: { key: FilterPeriod; label: string }[] = [
+  { key: "today", label: "Aujourd'hui" },
+  { key: "week", label: "Cette semaine" },
+  { key: "month", label: "Ce mois" },
+  { key: "all", label: "Tout" },
+];
 
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [period, setPeriod] = useState<FilterPeriod>("today");
 
   useEffect(() => {
     async function load() {
@@ -28,6 +66,16 @@ export default function CouponsPage() {
     }
     load();
   }, []);
+
+  const filteredCoupons = useMemo(() => {
+    switch (period) {
+      case "today": return coupons.filter((c) => isToday(c.created_at));
+      case "week": return coupons.filter((c) => isThisWeek(c.created_at));
+      case "month": return coupons.filter((c) => isThisMonth(c.created_at));
+      case "all": return coupons;
+      default: return coupons;
+    }
+  }, [coupons, period]);
 
   return (
     <main className="min-h-screen">
@@ -71,7 +119,7 @@ export default function CouponsPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-12"
+            className="text-center mb-8"
           >
             <Badge variant="premium" className="mb-4 px-4 py-1.5 text-sm">
               <Ticket className="w-4 h-4 mr-1" />
@@ -85,21 +133,42 @@ export default function CouponsPage() {
             </p>
           </motion.div>
 
+          {/* Filtres */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
+            <Filter className="w-4 h-4 text-gray-500" />
+            {filters.map((f) => (
+              <Button
+                key={f.key}
+                variant={period === f.key ? "premium" : "outline"}
+                size="sm"
+                onClick={() => setPeriod(f.key)}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
+
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="h-64 rounded-2xl bg-white/5 animate-pulse" />
               ))}
             </div>
-          ) : coupons.length === 0 ? (
+          ) : filteredCoupons.length === 0 ? (
             <div className="text-center py-16">
               <Ticket className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-400">Aucun coupon disponible</h3>
-              <p className="text-gray-500 mt-2">Revenez bientôt pour découvrir nos nouveaux coupons.</p>
+              <h3 className="text-xl font-semibold text-gray-400">
+                {period === "today" ? "Aucun coupon aujourd'hui" : "Aucun coupon trouvé"}
+              </h3>
+              <p className="text-gray-500 mt-2">
+                {period === "today"
+                  ? "Revenez demain pour découvrir nos nouvelles offres."
+                  : "Aucun coupon pour cette période."}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {coupons.map((coupon, i) => (
+              {filteredCoupons.map((coupon, i) => (
                 <motion.div
                   key={coupon.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -124,9 +193,13 @@ export default function CouponsPage() {
                     )}
                     <div className="flex items-center gap-2 mb-2">
                       <Calendar className="w-4 h-4 text-green-400 flex-shrink-0" />
-                      <span className="text-xs text-gray-500">
-                        {new Date(coupon.created_at).toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" })}
-                      </span>
+                      {isToday(coupon.created_at) ? (
+                        <Badge variant="success" className="text-[10px]">Aujourd'hui</Badge>
+                      ) : (
+                        <span className="text-xs text-gray-500">
+                          {new Date(coupon.created_at).toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" })}
+                        </span>
+                      )}
                     </div>
                     <h3 className="text-lg font-semibold text-white mb-2">{coupon.title}</h3>
                     <p className="text-sm text-gray-400 leading-relaxed whitespace-pre-wrap break-words">{coupon.description}</p>
