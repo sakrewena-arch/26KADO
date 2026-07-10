@@ -288,6 +288,7 @@ export async function GET(request: Request) {
     countryCode: result.countryCode,
     flag: countryInfo.flag,
     dialCode: countryInfo.dialCode,
+    countryDir: countryInfo.countryDir,
     mobileOperators: countryInfo.mobileOperators,
     banks: countryInfo.banks,
   });

@@ -1,131 +1,134 @@
 "use client";
 
-import { useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useWallet } from "@/hooks/useWallet";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Wallet, ArrowUpFromLine, Plus, CreditCard } from "lucide-react";
+import { Wallet, Coins, ArrowUpFromLine, Plus, CreditCard, Gift, Users, Award } from "lucide-react";
+
+const sourceIcons: Record<string, any> = {
+  commission: Coins,
+  referral: Users,
+  withdrawal: ArrowUpFromLine,
+  payment: CreditCard,
+};
+
+const sourceLabels: Record<string, string> = {
+  commission: "Commission",
+  referral: "Parrainage",
+  withdrawal: "Retrait",
+  payment: "Paiement",
+};
+
+const sourceColors: Record<string, string> = {
+  commission: "text-green-400",
+  referral: "text-blue-400",
+  withdrawal: "text-yellow-400",
+  payment: "text-orange-400",
+};
 
 export default function WalletPage() {
-  const { wallet, transactions, createWithdrawal, loading } = useWallet();
+  const { wallet, transactions, loading } = useWallet();
   const { profile } = useAuth();
-  const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState("orange_money");
-  const [accountInfo, setAccountInfo] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleWithdrawal = async () => {
-    if (!amount || !accountInfo) return;
-    setIsSubmitting(true);
-    await createWithdrawal(Number(amount), method, accountInfo);
-    setAmount("");
-    setAccountInfo("");
-    setIsSubmitting(false);
-  };
+  const balance = wallet?.balance ?? profile?.total_commission ?? 0;
 
   return (
     <DashboardLayout title="Portefeuille">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Balance */}
-        <Card className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <p className="text-sm text-gray-400">Solde disponible</p>
-              <p className="text-4xl font-bold text-white mt-1">
-                {formatCurrency(profile?.total_commission || 0)}
-              </p>
-            </div>
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20">
+        {/* Solde */}
+        <Card>
+          <div className="text-center">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 inline-flex mb-4">
               <Wallet className="w-8 h-8 text-blue-400" />
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 rounded-xl bg-white/5">
-              <p className="text-xs text-gray-400">Total gagné</p>
-              <p className="text-lg font-bold text-green-400">{formatCurrency(profile?.total_commission || 0)}</p>
-            </div>
-            <div className="p-3 rounded-xl bg-white/5">
-              <p className="text-xs text-gray-400">Total retiré</p>
-              <p className="text-lg font-bold text-yellow-400">{formatCurrency(profile?.total_commission || 0)}</p>
+            <p className="text-sm text-gray-400">Solde disponible</p>
+            <p className="text-3xl font-bold text-white mt-1">
+              {formatCurrency(balance)}
+            </p>
+            <div className="mt-4 space-y-2">
+              <div className="p-3 rounded-xl bg-white/5">
+                <p className="text-xs text-gray-400">Total gagné</p>
+                <p className="text-lg font-bold text-green-400">{formatCurrency(wallet?.total_earned ?? 0)}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-white/5">
+                <p className="text-xs text-gray-400">Total retiré</p>
+                <p className="text-lg font-bold text-yellow-400">{formatCurrency(wallet?.total_withdrawn ?? 0)}</p>
+              </div>
             </div>
           </div>
         </Card>
 
-        {/* Withdrawal Form */}
-        <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Effectuer un retrait</h3>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Montant</Label>
-              <Input
-                type="number"
-                placeholder="5000"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
+        {/* Résumé des transactions */}
+        <Card className="lg:col-span-2">
+          <h3 className="text-lg font-semibold text-white mb-4">Résumé des transactions</h3>
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="h-20 rounded-xl bg-white/5 animate-pulse" />
+              ))}
             </div>
-            <div className="space-y-2">
-              <Label>Méthode</Label>
-              <select
-                value={method}
-                onChange={(e) => setMethod(e.target.value)}
-                className="w-full h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-white"
-              >
-                <option value="orange_money">Orange Money</option>
-                <option value="mtn_money">MTN Mobile Money</option>
-                <option value="wave">Wave</option>
-                <option value="paydunya">PayDunya</option>
-              </select>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {Object.entries(sourceLabels).map(([key, label]) => {
+                const Icon = sourceIcons[key] || Wallet;
+                const total = transactions
+                  .filter((tx) => tx.source === key)
+                  .reduce((sum, tx) => sum + Number(tx.amount), 0);
+                const count = transactions.filter((tx) => tx.source === key).length;
+                const isCredit = key !== "withdrawal" && key !== "payment";
+
+                return (
+                  <div key={key} className="p-3 rounded-xl bg-white/5 text-center">
+                    <Icon className={`w-5 h-5 mx-auto mb-1 ${sourceColors[key]}`} />
+                    <p className="text-xs text-gray-500">{label}</p>
+                    <p className={`text-sm font-bold ${isCredit ? "text-green-400" : "text-yellow-400"}`}>
+                      {isCredit ? "+" : "-"}{formatCurrency(total)}
+                    </p>
+                    <p className="text-[10px] text-gray-600">{count} opération(s)</p>
+                  </div>
+                );
+              })}
             </div>
-            <div className="space-y-2">
-              <Label>Numéro de compte</Label>
-              <Input
-                placeholder="+226 XX XX XX XX"
-                value={accountInfo}
-                onChange={(e) => setAccountInfo(e.target.value)}
-              />
-            </div>
-            <Button
-              className="w-full"
-              onClick={handleWithdrawal}
-              disabled={isSubmitting || !amount || !accountInfo}
-            >
-              {isSubmitting ? "Traitement..." : "Retirer"}
-              <ArrowUpFromLine className="ml-2 w-4 h-4" />
-            </Button>
-          </div>
+          )}
         </Card>
       </div>
 
-      {/* Transactions */}
+      {/* Historique complet des transactions */}
       <Card className="mt-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Historique des transactions</h3>
-        {transactions.length === 0 ? (
+        <h3 className="text-lg font-semibold text-white mb-4">Historique complet</h3>
+        {loading ? (
+          <div className="space-y-2">{[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-14 rounded-xl bg-white/5 animate-pulse" />)}</div>
+        ) : transactions.length === 0 ? (
           <p className="text-sm text-gray-500 text-center py-8">Aucune transaction</p>
         ) : (
-          <div className="space-y-3">
-            {transactions.map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5">
-                <div>
-                  <p className="text-sm text-white">
-                    {tx.type === "credit" ? "+" : "-"}{formatCurrency(tx.amount)}
-                  </p>
-                  <p className="text-xs text-gray-500">{tx.description}</p>
+          <div className="space-y-2">
+            {transactions.map((tx) => {
+              const Icon = sourceIcons[tx.source] || Wallet;
+              const isCredit = tx.type === "credit";
+              return (
+                <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center ${sourceColors[tx.source]}`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-white font-medium">
+                        {sourceLabels[tx.source] || tx.source}
+                      </p>
+                      <p className="text-xs text-gray-500">{tx.description}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-bold ${isCredit ? "text-green-400" : "text-red-400"}`}>
+                      {isCredit ? "+" : "-"}{formatCurrency(tx.amount)}
+                    </p>
+                    <p className="text-[10px] text-gray-600">{formatDate(tx.created_at)}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <Badge variant={tx.type === "credit" ? "success" : "warning"}>
-                    {tx.type === "credit" ? "Crédit" : "Débit"}
-                  </Badge>
-                  <p className="text-xs text-gray-600 mt-1">{formatDate(tx.created_at)}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </Card>

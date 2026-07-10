@@ -1,22 +1,16 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/auth";
 
-const inter = Inter({
-  variable: "--font-sans",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
   title: {
-    default: "26KADO - Programme d'affiliation des bookmakers en Afrique",
+    default: "26KADO - Meilleur programme de récompense en Afrique",
     template: "%s | 26KADO",
   },
   description:
-    "26KADO est la plateforme N°1 d'affiliation des bookmakers en Afrique. Promouvez les codes promo 1xBet, BetWinner, MelBet, LineBet et gagnez des commissions exclusives.",
+    "26KADO est la plateforme N°1 pour gagner gratuitement de l’argent en accomplissant des tâches en Afrique. Promouvez le codes promo 26KADO sur 1xBet, BetWinner, MelBet, LineBet et gagnez des commissions exclusives.",
   keywords: [
     "26KADO",
     "affiliation",
@@ -93,7 +87,7 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <body
-        className={`${inter.variable} antialiased min-h-screen bg-background text-foreground`}
+        className={`antialiased min-h-screen bg-background text-foreground font-sans`}
       >
         <ThemeProvider
           attribute="class"

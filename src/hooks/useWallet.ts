@@ -69,7 +69,6 @@ export function useWallet(): UseWalletReturn {
   };
 
   const rechargePayDunya = async (amount: number) => {
-    // Simulation PayDunya - à remplacer par l'intégration réelle
     try {
       const response = await fetch("/api/paydunya/init", {
         method: "POST",
@@ -77,6 +76,9 @@ export function useWallet(): UseWalletReturn {
         body: JSON.stringify({ amount, user_id: user?.id }),
       });
       const data = await response.json();
+      if (!response.ok) {
+        return { error: data?.error || "Erreur de paiement" };
+      }
       if (data.url) {
         return { error: null, url: data.url };
       }

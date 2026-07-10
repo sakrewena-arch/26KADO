@@ -1,16 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
-
-type PaydunyaInitRequest = {
-  amount: number;
-  user_id?: string;
-  type?: "manual" | "user";
-};
+import { createDepositInvoice } from "@/lib/paydunya";
 
 export async function POST(request: NextRequest) {
-  const payload = (await request.json().catch(() => null)) as PaydunyaInitRequest | null;
+  const payload = await request.json().catch(() => null);
 
-  if (!payload || typeof payload.amount !== "number" || payload.amount <= 0) {
+  if (!payload || !payload.amount || payload.amount <= 0) {
     return NextResponse.json({ error: "Montant invalide" }, { status: 400 });
   }
 
@@ -19,47 +14,40 @@ export async function POST(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll() {
-          // No-op: this route does not require updating auth cookies.
-        },
+        getAll() { return request.cookies.getAll(); },
+        setAll() { /* no-op */ },
       },
     }
   );
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("full_name, email, phone")
     .eq("id", user.id)
     .single();
 
-  if (profileError || !profile) {
-    return NextResponse.json({ error: "Impossible de vérifier les droits" }, { status: 403 });
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+  const result = await createDepositInvoice({
+    amount: payload.amount,
+    customer_name: profile?.full_name || user.email || "Client",
+    customer_email: profile?.email || user.email || "",
+    customer_phone: payload.phone || profile?.phone || "",
+    description: `Dépôt de ${payload.amount.toLocaleString()} FCFA sur 26KADO`,
+    user_id: user.id,
+    return_url: `${siteUrl}/dashboard/wallet?deposit=success`,
+    cancel_url: `${siteUrl}/dashboard/wallet?deposit=cancel`,
+    notify_url: `${siteUrl}/api/paydunya/notify`,
+  });
+
+  if (!result.success) {
+    return NextResponse.json({ error: result.error || "Erreur PayDunya" }, { status: 500 });
   }
 
-  const isAdmin = profile.role === "admin" || profile.role === "super_admin";
-
-  if (payload.type === "manual" && !isAdmin) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-  }
-
-  if (payload.user_id && payload.user_id !== user.id && !isAdmin) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-  }
-
-  const orderId = `paydunya-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
-  const checkoutUrl = `https://paydunya.test/checkout?amount=${payload.amount}&order_id=${orderId}`;
-
-  return NextResponse.json({ url: checkoutUrl });
+  return NextResponse.json({ url: result.invoice_url, token: result.invoice_token });
 }

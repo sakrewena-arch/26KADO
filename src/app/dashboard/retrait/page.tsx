@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useWallet } from "@/hooks/useWallet";
 import { useAuth } from "@/hooks/useAuth";
-import { formatCurrency } from "@/lib/utils";
-import { Wallet, ArrowUpFromLine, Smartphone, Building2, Loader2 } from "lucide-react";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { Wallet, ArrowUpFromLine, Smartphone, Building2, Loader2, Check, X } from "lucide-react";
+import type { WithdrawalRequest } from "@/types";
 
 const operatorImageMap: Record<string, string> = {
   "orange_money": "orange",
@@ -27,11 +29,6 @@ interface MobileOperator {
   name: string;
 }
 
-interface Bank {
-  code: string;
-  name: string;
-}
-
 interface CountryInfo {
   country: string;
   countryCode: string;
@@ -39,21 +36,54 @@ interface CountryInfo {
   dialCode: string;
   countryDir?: string;
   mobileOperators: MobileOperator[];
-  banks: Bank[];
 }
+
+const cardTypes = [
+  { code: "visa", name: "Visa" },
+  { code: "mastercard", name: "Mastercard" },
+  { code: "amex", name: "American Express" },
+];
 
 export default function RetraitPage() {
   const { wallet, createWithdrawal, loading } = useWallet();
-  const { profile } = useAuth();
+  const { user } = useAuth();
+  const supabase = createClient();
+  const balance = wallet?.balance ?? 0;
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
+  const [withdrawalsLoading, setWithdrawalsLoading] = useState(true);
   const [countryInfo, setCountryInfo] = useState<CountryInfo | null>(null);
   const [geoLoading, setGeoLoading] = useState(true);
   const [amount, setAmount] = useState("");
   const [accountInfo, setAccountInfo] = useState("");
-  const [paymentType, setPaymentType] = useState<"mobile" | "bank">("mobile");
+  const [paymentType, setPaymentType] = useState<"mobile" | "card">("mobile");
   const [selectedOperator, setSelectedOperator] = useState("");
-  const [selectedBank, setSelectedBank] = useState("");
+  const [selectedCard, setSelectedCard] = useState("visa");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Charger l'historique des retraits
+  const loadWithdrawals = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data } = await supabase
+        .from("withdrawal_requests")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (data) setWithdrawals(data as WithdrawalRequest[]);
+    } catch (err) {
+      console.error("Erreur chargement retraits:", err);
+    } finally {
+      setWithdrawalsLoading(false);
+    }
+  }, [user, supabase]);
+
+  useEffect(() => {
+    loadWithdrawals();
+  }, [loadWithdrawals]);
+
+  // Détection du pays
   useEffect(() => {
     const detectCountry = async () => {
       try {
@@ -62,9 +92,6 @@ export default function RetraitPage() {
         setCountryInfo(data);
         if (data.mobileOperators?.length > 0) {
           setSelectedOperator(data.mobileOperators[0].code);
-        }
-        if (data.banks?.length > 0) {
-          setSelectedBank(data.banks[0].code);
         }
       } catch (err) {
         console.error("Geo detection failed", err);
@@ -76,29 +103,60 @@ export default function RetraitPage() {
   }, []);
 
   const handleWithdrawal = async () => {
-    const finalMethod = paymentType === "mobile" ? selectedOperator : selectedBank;
+    const finalMethod = paymentType === "mobile" ? selectedOperator : selectedCard;
     const fullAccount = countryInfo ? `${countryInfo.dialCode} ${accountInfo}` : accountInfo;
     if (!amount || !fullAccount || !finalMethod) return;
     setIsSubmitting(true);
-    await createWithdrawal(Number(amount), finalMethod, fullAccount);
-    setAmount("");
-    setAccountInfo("");
+    setSuccessMessage(null);
+    const result = await createWithdrawal(Number(amount), finalMethod, fullAccount);
+    if (!result.error) {
+      setSuccessMessage("Retrait effectué avec succès");
+      setAmount("");
+      setAccountInfo("");
+      loadWithdrawals(); // Recharger l'historique
+    }
     setIsSubmitting(false);
+  };
+
+  const statusBadge = (status: string) => {
+    const variants: Record<string, "success" | "danger" | "warning" | "default"> = {
+      paid: "success",
+      validated: "success",
+      rejected: "danger",
+      pending: "warning",
+    };
+    return variants[status] || "default";
+  };
+
+  const statusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      paid: "Payé",
+      validated: "Validé",
+      rejected: "Refusé",
+      pending: "En attente",
+    };
+    return labels[status] || status;
   };
 
   return (
     <DashboardLayout title="Retrait">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Solde */}
+        {/* Solde & Stats */}
         <Card>
           <div className="text-center">
             <p className="text-sm text-gray-400">Solde disponible</p>
             <p className="text-3xl font-bold text-white mt-1">
-              {formatCurrency(profile?.total_commission || 0)}
+              {formatCurrency(balance)}
             </p>
-            <div className="mt-4 p-3 rounded-xl bg-white/5">
-              <p className="text-xs text-gray-400 mb-1">Total gagné</p>
-              <p className="text-lg font-bold text-green-400">{formatCurrency(profile?.total_commission || 0)}</p>
+            <div className="mt-4 space-y-2">
+              <div className="p-3 rounded-xl bg-white/5">
+                <p className="text-xs text-gray-400">Total gagné</p>
+                <p className="text-lg font-bold text-green-400">{formatCurrency(wallet?.total_earned ?? 0)}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-white/5">
+                <p className="text-xs text-gray-400">Total retiré</p>
+                <p className="text-lg font-bold text-yellow-400">{formatCurrency(wallet?.total_withdrawn ?? 0)}</p>
+              </div>
             </div>
           </div>
         </Card>
@@ -106,6 +164,12 @@ export default function RetraitPage() {
         {/* Formulaire de retrait */}
         <Card className="lg:col-span-2">
           <h3 className="text-lg font-semibold text-white mb-2">Effectuer un retrait</h3>
+
+          {successMessage && (
+            <div className="mb-4 p-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm flex items-center gap-2">
+              <Check className="w-4 h-4" /> {successMessage}
+            </div>
+          )}
 
           {/* Détection du pays */}
           {geoLoading ? (
@@ -134,9 +198,9 @@ export default function RetraitPage() {
                 <Smartphone className="w-4 h-4 mr-1" /> Mobile Money
               </Button>
               <Button
-                variant={paymentType === "bank" ? "premium" : "outline"}
+                variant={paymentType === "card" ? "premium" : "outline"}
                 size="sm"
-                onClick={() => setPaymentType("bank")}
+                onClick={() => setPaymentType("card")}
               >
                 <Building2 className="w-4 h-4 mr-1" /> Carte Bancaire
               </Button>
@@ -151,6 +215,7 @@ export default function RetraitPage() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
+              <p className="text-xs text-gray-500">Minimum 5 000 FCFA</p>
             </div>
 
             {/* Opérateurs Mobile Money */}
@@ -188,35 +253,35 @@ export default function RetraitPage() {
               </div>
             )}
 
-            {/* Banques */}
-            {paymentType === "bank" && countryInfo && (
+            {/* Cartes bancaires */}
+            {paymentType === "card" && (
               <div className="space-y-2">
-                <Label>Banque</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {countryInfo.banks.map((bank) => (
+                <Label>Carte bancaire</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {cardTypes.map((card) => (
                     <button
-                      key={bank.code}
-                      onClick={() => setSelectedBank(bank.code)}
+                      key={card.code}
+                      onClick={() => setSelectedCard(card.code)}
                       className={`p-3 rounded-xl border text-center transition-all ${
-                        selectedBank === bank.code
+                        selectedCard === card.code
                           ? "border-blue-500 bg-blue-500/10"
                           : "border-white/10 bg-white/5 hover:bg-white/10"
                       }`}
                     >
-                      <div className="w-8 h-8 mx-auto mb-1 rounded-lg bg-white/10 flex items-center justify-center overflow-hidden">
+                      <div className="w-10 h-8 mx-auto mb-1 rounded-lg bg-white/10 flex items-center justify-center overflow-hidden p-1">
                         <img
-                          src={`/images/card/${bank.code}.jfif`}
-                          alt={bank.name}
-                          className="w-7 h-7 object-contain"
+                          src={`/images/cards/${card.code}.jfif`}
+                          alt={card.name}
+                          className="w-full h-full object-contain"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
                             target.style.display = 'none';
                             const parent = target.parentElement;
-                            if (parent) parent.innerHTML = `<span class="text-white font-bold text-xs">${bank.name[0]}</span>`;
+                            if (parent) parent.innerHTML = `<span class="text-white font-bold text-xs">${card.name[0]}</span>`;
                           }}
                         />
                       </div>
-                      <p className="text-xs text-white">{bank.name}</p>
+                      <p className="text-xs text-white">{card.name}</p>
                     </button>
                   ))}
                 </div>
@@ -226,7 +291,7 @@ export default function RetraitPage() {
             {/* Numéro de compte */}
             <div className="space-y-2">
               <Label>
-                {paymentType === "mobile" ? "Numéro de téléphone" : "Numéro de carte / compte"}
+                {paymentType === "mobile" ? "Numéro de téléphone" : "Numéro de carte"}
               </Label>
               <div className="flex gap-2">
                 {countryInfo && (
@@ -259,6 +324,33 @@ export default function RetraitPage() {
           </div>
         </Card>
       </div>
+
+      {/* Historique des retraits */}
+      <Card className="mt-6">
+        <h3 className="text-lg font-semibold text-white mb-4">Historique des retraits</h3>
+        {withdrawalsLoading ? (
+          <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-14 rounded-xl bg-white/5 animate-pulse" />)}</div>
+        ) : withdrawals.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center py-8">Aucun retrait effectué</p>
+        ) : (
+          <div className="space-y-3">
+            {withdrawals.map((w) => (
+              <div key={w.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+                <div>
+                  <p className="text-sm text-white font-medium">{formatCurrency(w.amount)}</p>
+                  <p className="text-xs text-gray-500">{w.method} • {w.account_info}</p>
+                </div>
+                <div className="text-right">
+                  <Badge variant={statusBadge(w.status)} className="text-[10px]">
+                    {statusLabel(w.status)}
+                  </Badge>
+                  <p className="text-xs text-gray-600 mt-1">{formatDate(w.created_at)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </DashboardLayout>
   );
 }
