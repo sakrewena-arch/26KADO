@@ -84,8 +84,6 @@ export default function Header() {
                 </div>
               )}
 
-              <ThemeToggle />
-
               {/* Mobile menu button */}
               <button
                 onClick={() => setMobileOpen(true)}
