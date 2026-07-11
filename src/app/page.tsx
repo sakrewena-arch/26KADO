@@ -18,6 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { siteConfig } from "@/config/site";
 import { formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useWallet } from "@/hooks/useWallet";
+import { ArrowUpFromLine } from "lucide-react";
 
 // Animated Counter
 function CountUp({ end, duration = 2, suffix = "" }: { end: number; duration?: number; suffix?: string }) {
@@ -388,6 +390,7 @@ function EarnMoneyCard({ onEarnClick }: { onEarnClick: () => void }) {
 export default function HomePage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { wallet } = useWallet();
   const [copied, setCopied] = useState(false);
 
   const handleEarnClick = () => {
@@ -401,11 +404,9 @@ export default function HomePage() {
     <main className="min-h-screen">
       <Header />
 
-      {/* ===== HERO SECTION (Ad-safe) ===== */}
+      {/* ===== HERO SECTION ===== */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-16">
         <div className="absolute inset-0 bg-grid opacity-20" />
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: "1s" }} />
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
@@ -413,17 +414,38 @@ export default function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <Badge variant="premium" className="mb-6 px-4 py-1.5 text-sm">
-              Communauté N°1 en Afrique
-            </Badge>
-            
-            <h1 className="text-5xl sm:text-6xl lg:text-8xl font-bold mb-6">
+            <h1 className="text-5xl sm:text-6xl lg:text-8xl font-bold mb-4">
               <span className="text-gradient glow-blue">26KADO</span>
             </h1>
             
-            <p className="text-xl sm:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-              L'actualité foot, les meilleures offres et les codes promo exclusifs.
+            <p className="text-lg sm:text-xl text-gray-300 mb-6 max-w-4xl mx-auto leading-relaxed">
+              Gagnez gratuitement de l'argent en accomplissant des tâches simples, 
+              retrouvez toute l'actualité foot, les meilleures offres et les codes promo exclusifs.
             </p>
+
+            {/* Wallet + Retrait pour tous les utilisateurs */}
+            {!loading && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="mb-8"
+              >
+                <div className="inline-flex items-center gap-4 p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10">
+                  <div className="text-left">
+                    <p className="text-xs text-gray-400">Solde disponible</p>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(wallet?.balance ?? 0)}</p>
+                  </div>
+                  <div className="w-px h-10 bg-white/10" />
+                  <Link href={user ? "/dashboard/retrait" : "/auth/register"}>
+                    <Button variant="premium" size="lg">
+                      <ArrowUpFromLine className="w-5 h-5 mr-2" />
+                      {user ? "Retrait" : "Rejoindre"}
+                    </Button>
+                  </Link>
+                </div>
+              </motion.div>
+            )}
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-12 max-w-4xl mx-auto">
               {[
@@ -436,7 +458,7 @@ export default function HomePage() {
                   key={stat.label}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + i * 0.1 }}
+                  transition={{ delay: 0.4 + i * 0.1 }}
                   className="glass-card rounded-2xl p-4"
                 >
                   <div className="text-2xl lg:text-3xl font-bold text-gradient">

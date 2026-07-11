@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/auth";
+import Beams from "@/components/Beams";
 
 export const metadata: Metadata = {
   title: {
@@ -96,11 +97,18 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <div className="ambient-bg" />
-            <div className="grid-overlay" />
-            <div className="orb orb-1" />
-            <div className="orb orb-2" />
-            <div className="orb orb-3" />
+            <div className="fixed inset-0 z-0 pointer-events-none">
+              <Beams
+                beamWidth={3}
+                beamHeight={30}
+                beamNumber={20}
+                lightColor="#ffffff"
+                speed={2}
+                noiseIntensity={1.75}
+                scale={0.2}
+                rotation={30}
+              />
+            </div>
             {children}
             <Toaster />
           </AuthProvider>

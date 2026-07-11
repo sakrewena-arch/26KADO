@@ -261,6 +261,17 @@ html {
   .grid-overlay { background-size: 30px 30px; }
 }
 
+/* Lightfall background */
+.lightfall-container {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
 @keyframes ambient-glow {
   0% { opacity: 0.6; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.05); }
