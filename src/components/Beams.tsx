@@ -51,7 +51,7 @@ function extendMaterial(BaseMaterial: any, cfg: any) {
 }
 
 const CanvasWrapper = ({ children }: { children: React.ReactNode }) => (
-  <Canvas dpr={[1, 2]} frameloop="always" className="w-full h-full relative">
+  <Canvas dpr={[0.5, 1]} frameloop="demand" className="w-full h-full relative" style={{ position: 'absolute', inset: 0 }}>
     {children}
   </Canvas>
 );
