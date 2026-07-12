@@ -3,7 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/auth";
-import SideRays from "@/components/SideRays";
+import GradientBlinds from "@/components/GradientBlinds";
 
 export const metadata: Metadata = {
   title: {
@@ -97,20 +97,23 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            {/* SideRays background */}
-            <SideRays
-              speed={2.5}
-              rayColor1="#EAB308"
-              rayColor2="#96c8ff"
-              intensity={2}
-              spread={2}
-              origin="top-right"
-              tilt={0}
-              saturation={1.5}
-              blend={0.75}
-              falloff={1.6}
-              opacity={1}
-            />
+            {/* GradientBlinds background */}
+            <div className="fixed inset-0 z-0 pointer-events-none" style={{ contain: 'strict' }}>
+              <GradientBlinds
+                gradientColors={['#FF9FFC', '#5227FF']}
+                angle={20}
+                noise={0.5}
+                blindCount={16}
+                blindMinWidth={60}
+                spotlightRadius={0.5}
+                spotlightSoftness={1}
+                spotlightOpacity={1}
+                mouseDampening={0.15}
+                distortAmount={0}
+                shineDirection="left"
+                mixBlendMode="lighten"
+              />
+            </div>
             {children}
             <Toaster />
           </AuthProvider>
