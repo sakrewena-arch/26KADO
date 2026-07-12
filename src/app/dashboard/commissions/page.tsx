@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { getCommissions } from "@/lib/supabase/queries";
-import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from "@/lib/utils";
+import { formatCurrency, formatDate, getStatusLabel } from "@/lib/utils";
 import type { Commission } from "@/types";
 import { Coins, Filter } from "lucide-react";
 
