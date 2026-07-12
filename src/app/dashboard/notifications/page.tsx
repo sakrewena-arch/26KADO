@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNotifications } from "@/hooks/useNotifications";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { Bell, CheckCheck, Mail, MailOpen } from "lucide-react";
 
 export default function NotificationsPage() {
@@ -51,7 +51,7 @@ export default function NotificationsPage() {
                     {notif.title}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">{notif.message}</p>
-                  <p className="text-xs text-gray-600 mt-1">{formatDateTime(notif.created_at)}</p>
+                  <p className="text-xs text-gray-600 mt-1">{formatDate(notif.created_at)}</p>
                 </div>
                 {!notif.is_read && (
                   <div className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0 mt-2" />
