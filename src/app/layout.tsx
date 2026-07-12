@@ -3,7 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/auth";
-import GradientBlinds from "@/components/GradientBlinds";
+
 
 export const metadata: Metadata = {
   title: {
@@ -97,22 +97,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            {/* GradientBlinds background */}
-            <div className="fixed inset-0 z-0 pointer-events-none" style={{ contain: 'strict' }}>
-              <GradientBlinds
-                gradientColors={['#FF9FFC', '#5227FF']}
-                angle={20}
-                noise={0.5}
-                blindCount={16}
-                blindMinWidth={60}
-                spotlightRadius={0.5}
-                spotlightSoftness={1}
-                spotlightOpacity={1}
-                mouseDampening={0.15}
-                distortAmount={0}
-                shineDirection="left"
-                mixBlendMode="lighten"
-              />
+            {/* Static background - same colors as GradientBlinds but without WebGL */}
+            <div className="fixed inset-0 z-0 pointer-events-none">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#FF9FFC]/15 via-[#5227FF]/10 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-[#5227FF]/5 to-[#FF9FFC]/8" />
+              <div className="absolute inset-0 bg-grid opacity-10" />
             </div>
             {children}
             <Toaster />
