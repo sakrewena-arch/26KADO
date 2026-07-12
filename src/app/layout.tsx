@@ -3,7 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/auth";
-import Beams from "@/components/Beams";
+import SideRays from "@/components/SideRays";
 
 export const metadata: Metadata = {
   title: {
@@ -97,15 +97,19 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <Beams
-              beamWidth={3}
-              beamHeight={30}
-              beamNumber={20}
-              lightColor="#ffffff"
-              speed={2}
-              noiseIntensity={1.75}
-              scale={0.2}
-              rotation={30}
+            {/* SideRays background */}
+            <SideRays
+              speed={2.5}
+              rayColor1="#EAB308"
+              rayColor2="#96c8ff"
+              intensity={2}
+              spread={2}
+              origin="top-right"
+              tilt={0}
+              saturation={1.5}
+              blend={0.75}
+              falloff={1.6}
+              opacity={1}
             />
             {children}
             <Toaster />
