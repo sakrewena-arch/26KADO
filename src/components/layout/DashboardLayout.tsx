@@ -13,7 +13,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getInitials, getLevelColor } from "@/lib/utils";
+import { getInitials } from "@/lib/utils";
 
 const navigation = [
   { title: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
