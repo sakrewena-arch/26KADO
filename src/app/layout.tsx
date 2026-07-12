@@ -3,7 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/auth";
-
+import PixelSnow from "@/components/PixelSnow";
 
 export const metadata: Metadata = {
   title: {
@@ -97,12 +97,16 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            {/* Static background - same colors as GradientBlinds but without WebGL */}
-            <div className="fixed inset-0 z-0 pointer-events-none">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#FF9FFC]/15 via-[#5227FF]/10 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-[#5227FF]/5 to-[#FF9FFC]/8" />
-              <div className="absolute inset-0 bg-grid opacity-10" />
-            </div>
+            {/* PixelSnow background - Canvas 2D, no WebGL */}
+            <PixelSnow
+              color="#ffffff"
+              flakeSize={0.01}
+              minFlakeSize={1.25}
+              pixelResolution={200}
+              speed={1.25}
+              density={0.3}
+              direction={125}
+            />
             {children}
             <Toaster />
           </AuthProvider>

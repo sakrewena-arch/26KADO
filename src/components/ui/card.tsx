@@ -6,9 +6,9 @@ const Card = React.forwardRef<
   React.HTMLAttributes<HTMLDivElement> & { variant?: "default" | "premium" | "interactive" }
 >(({ className, variant = "default", ...props }, ref) => {
   const variants = {
-    default: "glass-card",
-    premium: "glass-card gradient-border",
-    interactive: "glass-card hover:scale-[1.02] transition-all duration-300 cursor-pointer",
+    default: "glass-card shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-xl",
+    premium: "glass-card gradient-border shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl",
+    interactive: "glass-card shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-xl hover:scale-[1.02] hover:shadow-[0_12px_48px_rgba(0,0,0,0.5)] transition-all duration-300 cursor-pointer",
   };
   return (
     <div
