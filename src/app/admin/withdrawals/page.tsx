@@ -12,6 +12,7 @@ import { formatCurrency, formatDate, getStatusLabel } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Check, X, ArrowUpFromLine, Loader2, Search, ChevronDown, ChevronUp, Phone, User, MessageCircle, Clock, Calendar } from "lucide-react";
 import type { WithdrawalRequest, Profile } from "@/types";
+import { PeriodFilter, filterByPeriod, type Period } from "@/components/ui/period-filter";
 
 export default function AdminWithdrawalsPage() {
   const supabase = createClient();
@@ -31,6 +32,7 @@ export default function AdminWithdrawalsPage() {
   const [showClaims, setShowClaims] = useState(false);
   const [claimableWithdrawals, setClaimableWithdrawals] = useState<(WithdrawalRequest & { user_profile?: Profile })[]>([]);
   const [expandedWithdrawal, setExpandedWithdrawal] = useState<string | null>(null);
+  const [period, setPeriod] = useState<Period>("month");
 
   const loadWithdrawals = useCallback(async () => {
     try {
@@ -375,12 +377,15 @@ export default function AdminWithdrawalsPage() {
 
       {/* ===== HISTORIQUE COMPLET ===== */}
       <Card>
-        <h3 className="text-lg font-semibold text-white mb-4">Tous les retraits</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Tous les retraits</h3>
+          <PeriodFilter value={period} onChange={setPeriod} />
+        </div>
         {loading ? (
           <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-14 rounded-xl bg-white/5 animate-pulse" />)}</div>
         ) : (
           <div className="space-y-2 max-h-[500px] overflow-y-auto">
-            {withdrawals.map((w) => (
+            {filterByPeriod(withdrawals, period).map((w) => (
               <div key={w.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center">

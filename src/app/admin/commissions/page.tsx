@@ -9,12 +9,14 @@ import { getAllCommissions } from "@/lib/supabase/queries";
 import { formatCurrency, formatDate, getStatusLabel } from "@/lib/utils";
 import { Coins, Filter, Check, X, DollarSign } from "lucide-react";
 import type { Commission } from "@/types";
+import { PeriodFilter, filterByPeriod, type Period } from "@/components/ui/period-filter";
 
 export default function AdminCommissionsPage() {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
+  const [period, setPeriod] = useState<Period>("month");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const loadCommissions = useCallback(async () => {
@@ -59,7 +61,8 @@ export default function AdminCommissionsPage() {
     }
   };
 
-  const filtered = filter === "all" ? commissions : commissions.filter((c) => c.status === filter);
+  const statusFiltered = filter === "all" ? commissions : commissions.filter((c) => c.status === filter);
+  const filtered = filterByPeriod(statusFiltered, period);
   const total = commissions.reduce((sum, c) => sum + Number(c.amount), 0);
 
   return (
@@ -78,14 +81,17 @@ export default function AdminCommissionsPage() {
       </div>
 
       <Card>
-        <div className="flex items-center gap-2 mb-4">
-          <Filter className="w-4 h-4 text-gray-400" />
-          {["all", "pending", "validated", "paid", "rejected"].map((s) => (
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-gray-400" />
+            {["all", "pending", "validated", "paid", "rejected"].map((s) => (
             <button key={s} onClick={() => setFilter(s)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === s ? "bg-blue-500/20 text-blue-400" : "text-gray-400 hover:text-white hover:bg-white/5"}`}>
               {getStatusLabel(s)}
             </button>
           ))}
+          </div>
+          <PeriodFilter value={period} onChange={setPeriod} showLabel={false} />
         </div>
         {loading ? (
           <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-16 rounded-xl bg-white/5 animate-pulse" />)}</div>

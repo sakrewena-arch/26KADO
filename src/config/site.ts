@@ -108,8 +108,6 @@ export const siteConfig = {
   navigation: [
     { title: "Accueil", href: "/" },
     { title: "Bookmakers", href: "/bookmakers" },
-    { title: "Coupons", href: "/coupons" },
-    { title: "Actu Foot", href: "/football-news" },
     { title: "À propos", href: "/about" },
     { title: "FAQ", href: "/faq" },
     { title: "Classement", href: "/leaderboard" },
@@ -136,8 +134,6 @@ export const siteConfig = {
     { title: "Dépôt", href: "/admin/deposit", icon: "ArrowDownToLine" },
     { title: "Retraits", href: "/admin/withdrawals", icon: "ArrowUpFromLine" },
     { title: "Tickets", href: "/admin/tickets", icon: "Headphones" },
-    { title: "Coupons", href: "/admin/coupons", icon: "Ticket" },
-    { title: "Actu Foot", href: "/admin/football-news", icon: "Newspaper" },
     { title: "FAQ", href: "/admin/faq", icon: "HelpCircle" },
     { title: "Badges", href: "/admin/badges", icon: "Award" },
     { title: "Niveaux", href: "/admin/levels", icon: "BarChart3" },

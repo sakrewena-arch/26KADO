@@ -77,9 +77,10 @@ const cardTypes = [
 
 export default function RetraitPage() {
   const { wallet, createWithdrawal, loading } = useWallet();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const supabase = createClient();
-  const balance = wallet?.balance ?? 0;
+  // Utiliser le wallet si disponible, sinon le total_commission du profil
+  const balance = wallet?.balance ?? profile?.total_commission ?? 0;
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
   const [withdrawalsLoading, setWithdrawalsLoading] = useState(true);
   const [countryInfo, setCountryInfo] = useState<CountryInfo | null>(null);

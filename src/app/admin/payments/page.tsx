@@ -9,43 +9,17 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
-import { CreditCard, Search, Loader2, Check, X, User, Filter } from "lucide-react";
+import { CreditCard, Search, Loader2, Check, X, User } from "lucide-react";
 import type { PaymentTransaction, Profile } from "@/types";
+import { PeriodFilter, filterByPeriod, type Period } from "@/components/ui/period-filter";
 
-type FilterPeriod = "today" | "week" | "month" | "all";
-
-function isToday(dateStr: string) {
-  const d = new Date(dateStr);
-  const t = new Date();
-  return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear();
-}
-
-function isThisWeek(dateStr: string) {
-  const d = new Date(dateStr);
-  const t = new Date();
-  const weekAgo = new Date(t);
-  weekAgo.setDate(t.getDate() - 7);
-  return d >= weekAgo;
-}
-
-function isThisMonth(dateStr: string) {
-  const d = new Date(dateStr);
-  const t = new Date();
-  return d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear();
-}
-
-const periodLabels: Record<FilterPeriod, string> = {
-  today: "Aujourd'hui",
-  week: "Cette semaine",
-  month: "Ce mois",
-  all: "Tout",
-};
+// Les fonctions isToday, isThisWeek, isThisMonth sont importées depuis period-filter
 
 export default function AdminPaymentsPage() {
   const supabase = createClient();
   const [transactions, setTransactions] = useState<(PaymentTransaction & { user_profile?: Partial<Profile> })[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<FilterPeriod>("month");
+  const [period, setPeriod] = useState<Period>("month");
 
   // Recherche utilisateur pour dépôt manuel
   const [searchQuery, setSearchQuery] = useState("");
@@ -121,14 +95,7 @@ export default function AdminPaymentsPage() {
     }
   };
 
-  const filteredTransactions = transactions.filter((tx) => {
-    switch (filter) {
-      case "today": return isToday(tx.created_at);
-      case "week": return isThisWeek(tx.created_at);
-      case "month": return isThisMonth(tx.created_at);
-      default: return true;
-    }
-  });
+  const filteredTransactions = filterByPeriod(transactions, period);
 
   return (
     <AdminLayout title="Paiements & Dépôts">
@@ -242,20 +209,7 @@ export default function AdminPaymentsPage() {
         <Card>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-white">Transactions</h3>
-            <div className="flex gap-1">
-              <Filter className="w-4 h-4 text-gray-500 mr-1" />
-              {(Object.keys(periodLabels) as FilterPeriod[]).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setFilter(p)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors ${
-                    filter === p ? "bg-blue-500/20 text-blue-400" : "text-gray-500 hover:text-white hover:bg-white/5"
-                  }`}
-                >
-                  {periodLabels[p]}
-                </button>
-              ))}
-            </div>
+            <PeriodFilter value={period} onChange={setPeriod} />
           </div>
 
           {loading ? (

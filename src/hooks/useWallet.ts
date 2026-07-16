@@ -28,11 +28,36 @@ export function useWallet(): UseWalletReturn {
       setLoading(false);
       return;
     }
-    const { data: walletData } = await supabase
+
+    // Vérifier si le wallet existe, sinon le créer
+    let { data: walletData, error: walletError } = await supabase
       .from("wallets")
       .select("*")
       .eq("user_id", user.id)
       .single();
+
+    // Si le wallet n'existe pas, le créer automatiquement
+    if (walletError || !walletData) {
+      const { data: newWallet, error: createError } = await supabase
+        .from("wallets")
+        .insert({
+          user_id: user.id,
+          balance: 0,
+          total_earned: 0,
+          total_withdrawn: 0,
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error("Erreur création wallet:", createError);
+        setLoading(false);
+        return;
+      }
+
+      walletData = newWallet;
+    }
+
     if (walletData) {
       setWallet(walletData as Wallet);
       const { data: txData } = await supabase
