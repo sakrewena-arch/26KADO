@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 type Payload = {
   withdrawal_id?: string;
   user_id?: string;
-  status: "pending" | "validated" | "paid" | "rejected" | "deposit";
+  status: "pending" | "validated" | "paid" | "rejected" | "deposit" | "cancelled";
   amount?: number;
   method?: string;
   admin_note?: string;
@@ -42,15 +42,12 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  // ==========================================
-  // CAS DÉPÔT : Admin crédite un utilisateur
-  // ==========================================
+  // ====== CAS DÉPÔT : Admin crédite un utilisateur ======
   if (payload.status === "deposit") {
     if (!payload.user_id || !payload.amount || payload.amount <= 0) {
       return NextResponse.json({ error: "Paramètres de dépôt invalides" }, { status: 400 });
     }
 
-    // 1. Récupérer ou créer le wallet de l'utilisateur cible
     let { data: userWallet, error: walletError } = await supabase
       .from("wallets")
       .select("id, balance, total_earned")
@@ -58,7 +55,6 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (walletError || !userWallet) {
-      // Créer le wallet automatiquement
       const { data: newWallet, error: createError } = await supabase
         .from("wallets")
         .insert({
@@ -76,7 +72,6 @@ export async function PATCH(request: NextRequest) {
       userWallet = newWallet;
     }
 
-    // 2. Créditer le wallet de l'utilisateur
     const { error: creditError } = await supabase
       .from("wallets")
       .update({
@@ -89,7 +84,6 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Erreur lors du crédit" }, { status: 500 });
     }
 
-    // 3. Créer une transaction de crédit pour l'utilisateur
     await supabase.from("wallet_transactions").insert({
       wallet_id: userWallet.id,
       type: "credit",
@@ -98,7 +92,6 @@ export async function PATCH(request: NextRequest) {
       description: `Crédit manuel par l'admin${payload.method ? ` (${payload.method})` : ""}`,
     });
 
-    // 4. Notification à l'utilisateur
     await supabase.from("notifications").insert({
       user_id: payload.user_id,
       type: "payment",
@@ -107,14 +100,59 @@ export async function PATCH(request: NextRequest) {
     });
 
     return NextResponse.json({
+      success: true,
       status: "deposit",
       message: `Dépôt de ${Number(payload.amount).toLocaleString()} FCFA effectué`,
     });
   }
 
-  // ==========================================
-  // CAS RETRAIT (paid / validated / rejected)
-  // ==========================================
+  // ====== CAS ANNULATION DE DÉPÔT ======
+  if (payload.status === "cancelled") {
+    if (!payload.user_id || !payload.amount || payload.amount <= 0) {
+      return NextResponse.json({ error: "Paramètres d'annulation invalides" }, { status: 400 });
+    }
+
+    const { data: userWallet, error: walletError } = await supabase
+      .from("wallets")
+      .select("id, balance, total_earned")
+      .eq("user_id", payload.user_id)
+      .single();
+
+    if (walletError || !userWallet) {
+      return NextResponse.json({ error: "Portefeuille introuvable" }, { status: 404 });
+    }
+
+    if (Number(userWallet.balance) < Number(payload.amount)) {
+      return NextResponse.json({ error: "Solde insuffisant pour annuler" }, { status: 400 });
+    }
+
+    const { error: debitError } = await supabase
+      .from("wallets")
+      .update({
+        balance: Number(userWallet.balance) - Number(payload.amount),
+        total_earned: Number(userWallet.total_earned) - Number(payload.amount),
+      })
+      .eq("id", userWallet.id);
+
+    if (debitError) {
+      return NextResponse.json({ error: "Erreur lors de l'annulation" }, { status: 500 });
+    }
+
+    await supabase.from("wallet_transactions").insert({
+      wallet_id: userWallet.id,
+      type: "debit",
+      amount: Number(payload.amount),
+      source: "cancelled",
+      description: `Annulation de dépôt par l'admin`,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Dépôt de ${Number(payload.amount).toLocaleString()} FCFA annulé`,
+    });
+  }
+
+  // ====== CAS RETRAIT (paid / validated / rejected) ======
   if (!payload.withdrawal_id) {
     return NextResponse.json({ error: "withdrawal_id requis" }, { status: 400 });
   }
@@ -167,7 +205,7 @@ export async function PATCH(request: NextRequest) {
     });
   }
 
-  // Mettre à jour le statut
+  // Mettre à jour le statut de la demande
   const { error } = await supabase
     .from("withdrawal_requests")
     .update({
@@ -181,5 +219,5 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ status: payload.status });
+  return NextResponse.json({ success: true, status: payload.status });
 }

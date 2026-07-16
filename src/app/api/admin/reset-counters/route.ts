@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") {
+  if (!profile || !["super_admin", "admin", "moderator"].includes(profile.role)) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
