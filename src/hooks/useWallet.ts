@@ -29,45 +29,31 @@ export function useWallet(): UseWalletReturn {
       return;
     }
 
-    // Vérifier si le wallet existe, sinon le créer
-    let { data: walletData, error: walletError } = await supabase
+    // Ne PAS créer le wallet ici - la création se fait via les API admin
+    // Si le wallet n'existe pas, on utilise le profile.total_commission comme fallback
+    const { data: walletData, error: walletError } = await supabase
       .from("wallets")
       .select("*")
       .eq("user_id", user.id)
       .single();
 
-    // Si le wallet n'existe pas, le créer automatiquement
     if (walletError || !walletData) {
-      const { data: newWallet, error: createError } = await supabase
-        .from("wallets")
-        .insert({
-          user_id: user.id,
-          balance: 0,
-          total_earned: 0,
-          total_withdrawn: 0,
-        })
-        .select()
-        .single();
-
-      if (createError) {
-        console.error("Erreur création wallet:", createError);
-        setLoading(false);
-        return;
-      }
-
-      walletData = newWallet;
+      // Wallet inexistant → on ne crée PAS, on laisse wallet à null
+      // Le dashboard utilisera profile?.total_commission en fallback
+      setWallet(null);
+      setTransactions([]);
+      setLoading(false);
+      return;
     }
 
-    if (walletData) {
-      setWallet(walletData as Wallet);
-      const { data: txData } = await supabase
-        .from("wallet_transactions")
-        .select("*")
-        .eq("wallet_id", walletData.id)
-        .order("created_at", { ascending: false })
-        .limit(20);
-      if (txData) setTransactions(txData as WalletTransaction[]);
-    }
+    setWallet(walletData as Wallet);
+    const { data: txData } = await supabase
+      .from("wallet_transactions")
+      .select("*")
+      .eq("wallet_id", walletData.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (txData) setTransactions(txData as WalletTransaction[]);
     setLoading(false);
   }, [user, supabase]);
 
