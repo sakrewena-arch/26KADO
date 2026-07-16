@@ -117,8 +117,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: error.message };
     }
 
-    // Ne pas bloquer les admins - ils peuvent accéder au site normal
-    // (La vérification des droits se fait dans le middleware côté serveur)
+    if (data?.user) {
+      // Vérifier si l'utilisateur est banni
+      const profileResult = await fetchProfile(data.user.id);
+      if (profileResult && profileResult.is_active === false) {
+        await supabase.auth.signOut();
+        setUser(null);
+        setSession(null);
+        setProfile(null);
+        const message = "Ce compte a été désactivé. Contactez l'administration pour plus d'informations.";
+        setError(message);
+        return { error: message };
+      }
+    }
 
     return { error: null };
   };

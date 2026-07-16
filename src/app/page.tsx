@@ -261,7 +261,7 @@ export default function HomePage() {
               Gagnez gratuitement de l'argent en accomplissant des tâches simples, retrouvez toute l'actualité foot, les meilleures offres et les codes promo exclusifs.
             </p>
 
-            {!loading && (
+            {!loading && user !== null && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mb-8">
                 <div className="inline-flex items-center gap-4 p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10">
                   <div className="text-left">
@@ -269,8 +269,8 @@ export default function HomePage() {
                     <p className="text-2xl font-bold text-white">{formatCurrency(wallet?.balance ?? 0)}</p>
                   </div>
                   <div className="w-px h-10 bg-white/10" />
-                  <Link href={user ? "/dashboard/retrait" : "/auth/register"}>
-                    <Button variant="premium" size="lg"><ArrowUpFromLine className="w-5 h-5 mr-2" />{user ? "Retrait" : "Rejoindre"}</Button>
+                  <Link href="/dashboard/retrait">
+                    <Button variant="premium" size="lg"><ArrowUpFromLine className="w-5 h-5 mr-2" /> Retrait</Button>
                   </Link>
                 </div>
               </motion.div>
@@ -292,11 +292,11 @@ export default function HomePage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button size="xl" variant="premium" onClick={() => document.getElementById("earn")?.scrollIntoView({ behavior: "smooth" })}>Voir les offres <ChevronRight className="ml-2 w-5 h-5" /></Button>
-              {!loading && user ? (
+              {user ? (
                 <Link href="/dashboard"><Button size="xl" variant="default">Mon espace <ArrowRight className="ml-2 w-5 h-5" /></Button></Link>
-              ) : !loading && !user ? (
+              ) : (
                 <Link href="/auth/register"><Button size="xl" variant="default">Rejoindre gratuitement <ArrowRight className="ml-2 w-5 h-5" /></Button></Link>
-              ) : null}
+              )}
             </div>
           </motion.div>
         </div>

@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const stats = [
     {
       title: "Solde",
-      value: formatCurrency(profile?.total_commission || 0),
+      value: formatCurrency(wallet?.balance ?? profile?.total_commission ?? 0),
       icon: Wallet,
       color: "from-blue-500/20 to-purple-500/20 text-blue-400",
       href: "/dashboard/wallet",
@@ -106,7 +106,6 @@ export default function DashboardPage() {
                       link.href = canvas.toDataURL('image/png');
                       link.click();
                     } else {
-                      // Fallback: create a temporary canvas from SVG
                       const svg = document.getElementById('qrcode-referral')?.parentElement?.querySelector('svg');
                       if (svg) {
                         const serializer = new XMLSerializer();
