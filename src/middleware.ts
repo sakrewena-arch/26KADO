@@ -16,6 +16,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Skip middleware for auth pages (they handle their own redirects client-side)
+  if (path.startsWith("/auth/")) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -39,19 +44,27 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Récupérer l'utilisateur. Si pas de session, pas d'erreur, on continue.
+  const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
 
-  // Admin login page - always accessible
-  if (path === "/admin/login") {
-    if (user) {
-      const { data: profile } = await supabase
+  // Fonction utilitaire pour récupérer le profil sans erreur
+  const getProfile = async (userId: string) => {
+    try {
+      const { data } = await supabase
         .from("profiles")
         .select("role")
-        .eq("id", user.id)
+        .eq("id", userId)
         .single();
+      return data;
+    } catch {
+      return null;
+    }
+  };
 
+  // Admin login page - toujours accessible
+  if (path === "/admin/login") {
+    if (user) {
+      const profile = await getProfile(user.id);
       if (profile && ["super_admin", "admin", "moderator"].includes(profile.role)) {
         const url = request.nextUrl.clone();
         url.pathname = "/admin";
@@ -61,7 +74,7 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Protected admin routes
+  // Routes admin protégées
   if (path.startsWith("/admin")) {
     if (!user) {
       const url = request.nextUrl.clone();
@@ -69,14 +82,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
+    const profile = await getProfile(user.id);
     if (!profile || !["super_admin", "admin", "moderator"].includes(profile.role)) {
-      await supabase.auth.signOut();
+      try { await supabase.auth.signOut(); } catch {}
       const url = request.nextUrl.clone();
       url.pathname = "/admin/login";
       return NextResponse.redirect(url);
@@ -85,7 +93,7 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Dashboard protected routes
+  // Dashboard routes protégées
   if (path.startsWith("/dashboard")) {
     if (!user) {
       const url = request.nextUrl.clone();
@@ -95,10 +103,13 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Let all auth pages through - client-side will handle redirects
   return supabaseResponse;
 }
 
 export const config = {
-  matcher: ["/dashboard", "/dashboard/:path*", "/admin", "/admin/:path*", "/admin/login", "/auth/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/admin/:path*",
+    "/admin/login",
+  ],
 };

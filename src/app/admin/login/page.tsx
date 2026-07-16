@@ -27,6 +27,10 @@ export default function AdminLoginPage() {
     setIsLoading(true);
     setError(null);
 
+    // 1. Déconnecter d'abord tout utilisateur actuel
+    await supabase.auth.signOut();
+
+    // 2. Se connecter avec le compte admin
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
       password,

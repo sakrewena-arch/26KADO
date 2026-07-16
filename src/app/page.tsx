@@ -304,43 +304,6 @@ export default function HomePage() {
 
       <Section id="earn"><EarnMoneyCard onEarnClick={handleEarnClick} /></Section>
 
-      <Section className="bg-gradient-to-b from-transparent via-blue-950/10 to-transparent">
-        <div className="text-center mb-12">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center mx-auto mb-4"><Newspaper className="w-8 h-8 text-white" /></div>
-          <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">Toute l'actualité foot</h2>
-          <p className="text-gray-400 max-w-2xl mx-auto">Restez informé des dernières actualités, transferts et résultats.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[
-            { title: "Mercato : Les dernières infos", desc: "Toutes les rumeurs et transferts confirmés du mercato africain et européen.", badge: "Mercato", img: footballImages[0] },
-            { title: "Résultats du week-end", desc: "Les scores et les temps forts des matchs de vos équipes favorites.", badge: "Résultats", img: footballImages[1] },
-            { title: "Analyses et statistiques", desc: "Analyses détaillées, classements et performances des joueurs.", badge: "Analyses", img: footballImages[2] },
-          ].map((item, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
-              <Link href="/football-news">
-                <Card variant="interactive" className="h-full overflow-hidden group">
-                  <div className="relative h-48 overflow-hidden">
-                    <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-white text-xs font-medium border border-white/20">{item.badge}</div>
-                  </div>
-                  <div className="p-5">
-                    <h3 className="text-lg font-semibold text-white mb-2">{item.title}</h3>
-                    <p className="text-sm text-gray-400">{item.desc}</p>
-                    <div className="mt-4 flex items-center text-sm text-blue-400">Lire l'article <ArrowRight className="ml-1 w-3 h-3" /></div>
-                  </div>
-                </Card>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-
-        <div className="text-center mt-8">
-          <Link href="/football-news"><Button variant="outline" size="lg">Voir toutes les actualités <ArrowRight className="ml-2 w-5 h-5" /></Button></Link>
-        </div>
-      </Section>
-
       <Section>
         <div className="text-center mb-12">
           <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">Pourquoi nous rejoindre ?</h2>

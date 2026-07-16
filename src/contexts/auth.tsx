@@ -117,18 +117,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: error.message };
     }
 
-    if (data?.user) {
-      const profileResult = await fetchProfile(data.user.id);
-      if (profileResult && ["super_admin", "admin", "moderator"].includes(profileResult.role)) {
-        await supabase.auth.signOut();
-        setUser(null);
-        setSession(null);
-        setProfile(null);
-        const message = "Ce compte est réservé aux administrateurs. Utilisez la page d'administration.";
-        setError(message);
-        return { error: message };
-      }
-    }
+    // Ne pas bloquer les admins - ils peuvent accéder au site normal
+    // (La vérification des droits se fait dans le middleware côté serveur)
 
     return { error: null };
   };
