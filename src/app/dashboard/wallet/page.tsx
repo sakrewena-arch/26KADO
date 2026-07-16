@@ -4,6 +4,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useWallet } from "@/hooks/useWallet";
+import WithdrawalNotice from "@/components/WithdrawalNotice";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Wallet, Coins, ArrowUpFromLine, Plus, CreditCard, Gift, Users, Award } from "lucide-react";
@@ -36,6 +37,7 @@ export default function WalletPage() {
 
   return (
     <DashboardLayout title="Portefeuille">
+      <WithdrawalNotice />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Solde */}
         <Card>

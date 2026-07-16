@@ -9,95 +9,72 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAllWithdrawals } from "@/lib/supabase/queries";
 import { formatCurrency, formatDate, getStatusLabel } from "@/lib/utils";
-import { Check, X, ArrowUpFromLine, ArrowDownToLine, Smartphone, Building2, Loader2, Wallet, Search } from "lucide-react";
-import type { WithdrawalRequest } from "@/types";
-
-const operatorImageMap: Record<string, string> = {
-  "orange_money": "orange",
-  "mtn_money": "mtn",
-  "wave": "wave",
-  "moov": "moov",
-  "free_money": "free",
-  "djamo": "djamo",
-  "mixx": "mixx",
-};
-
-interface MobileOperator {
-  code: string;
-  name: string;
-}
-
-interface CountryInfo {
-  country: string;
-  countryCode: string;
-  flag: string;
-  dialCode: string;
-  countryDir?: string;
-  mobileOperators: MobileOperator[];
-}
-
-const cardTypes = [
-  { code: "visa", name: "Visa" },
-  { code: "mastercard", name: "Mastercard" },
-  { code: "amex", name: "American Express" },
-];
+import { createClient } from "@/lib/supabase/client";
+import { Check, X, ArrowUpFromLine, Loader2, Search, ChevronDown, ChevronUp, Phone, User, MessageCircle, Clock, Calendar } from "lucide-react";
+import type { WithdrawalRequest, Profile } from "@/types";
 
 export default function AdminWithdrawalsPage() {
-  const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
+  const supabase = createClient();
+  const [withdrawals, setWithdrawals] = useState<(WithdrawalRequest & { user_profile?: Profile })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"retraits" | "depot">("retraits");
 
-  // État pour le dépôt
-  const [countryInfo, setCountryInfo] = useState<CountryInfo | null>(null);
-  const [geoLoading, setGeoLoading] = useState(true);
+  // Dépôt manuel
   const [depositUserId, setDepositUserId] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
-  const [depositPaymentType, setDepositPaymentType] = useState<"mobile" | "card">("mobile");
-  const [depositOperator, setDepositOperator] = useState("");
-  const [depositCard, setDepositCard] = useState("visa");
-  const [depositAccount, setDepositAccount] = useState("");
   const [depositSubmitting, setDepositSubmitting] = useState(false);
   const [depositSuccess, setDepositSuccess] = useState<string | null>(null);
   const [depositError, setDepositError] = useState<string | null>(null);
 
-  // Détection de pays
-  useEffect(() => {
-    const detectCountry = async () => {
-      try {
-        const res = await fetch("/api/geo/detect");
-        const data = await res.json();
-        setCountryInfo(data);
-        if (data.mobileOperators?.length > 0) {
-          setDepositOperator(data.mobileOperators[0].code);
-        }
-      } catch (err) {
-        console.error("Geo detection failed", err);
-      } finally {
-        setGeoLoading(false);
-      }
-    };
-    detectCountry();
-  }, []);
+  // Réclamations
+  const [showClaims, setShowClaims] = useState(false);
+  const [claimableWithdrawals, setClaimableWithdrawals] = useState<(WithdrawalRequest & { user_profile?: Profile })[]>([]);
+  const [expandedWithdrawal, setExpandedWithdrawal] = useState<string | null>(null);
 
   const loadWithdrawals = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await getAllWithdrawals();
-      setWithdrawals(data);
+      // Enrichir avec les profils utilisateurs
+      const enriched = await Promise.all(
+        data.map(async (w) => {
+          if (w.user_id) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name, email, phone, referral_code, total_commission, total_referrals")
+              .eq("id", w.user_id)
+              .single();
+            return { ...w, user_profile: profile ? (profile as unknown as Profile) : undefined };
+          }
+          return w;
+        })
+      );
+      setWithdrawals(enriched);
     } catch (err) {
       setError("Erreur lors du chargement des retraits");
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     loadWithdrawals();
   }, [loadWithdrawals]);
+
+  // Filtrer les réclamations : retraits en attente depuis plus de 48h
+  useEffect(() => {
+    const now = new Date();
+    const claims = withdrawals.filter((w) => {
+      if (w.status !== "pending") return false;
+      const createdAt = new Date(w.created_at);
+      const hoursSince = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+      return hoursSince >= 48;
+    });
+    setClaimableWithdrawals(claims);
+  }, [withdrawals]);
 
   const handleStatus = async (id: string, status: "pending" | "validated" | "paid" | "rejected") => {
     setActionLoading(id);
@@ -125,7 +102,6 @@ export default function AdminWithdrawalsPage() {
     setDepositError(null);
     setDepositSuccess(null);
     try {
-      const method = depositPaymentType === "mobile" ? depositOperator : depositCard;
       const res = await fetch("/api/admin/withdrawals", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -133,15 +109,13 @@ export default function AdminWithdrawalsPage() {
           user_id: depositUserId,
           amount: Number(depositAmount),
           status: "deposit",
-          method,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erreur");
-      setDepositSuccess(`Dépôt de ${formatCurrency(Number(depositAmount))} effectué avec succès`);
+      setDepositSuccess(`Dépôt de ${formatCurrency(Number(depositAmount))} effectué`);
       setDepositAmount("");
       setDepositUserId("");
-      setDepositAccount("");
     } catch (err: any) {
       setDepositError(err.message || "Erreur lors du dépôt");
     } finally {
@@ -152,276 +126,282 @@ export default function AdminWithdrawalsPage() {
   const pending = withdrawals.filter((w) => w.status === "pending");
 
   return (
-    <AdminLayout title="Retraits & Dépôts">
-      {/* Onglets */}
-      <div className="flex gap-2 mb-6">
-        <Button
-          variant={activeTab === "retraits" ? "premium" : "outline"}
-          onClick={() => setActiveTab("retraits")}
-        >
-          <ArrowUpFromLine className="w-4 h-4 mr-2" />
-          Retraits ({pending.length})
-        </Button>
-        <Button
-          variant={activeTab === "depot" ? "premium" : "outline"}
-          onClick={() => setActiveTab("depot")}
-        >
-          <ArrowDownToLine className="w-4 h-4 mr-2" />
-          Dépôt manuel
-        </Button>
-      </div>
-
+    <AdminLayout title="Gestion des retraits">
       {error && (
-        <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-          {error}
-        </div>
+        <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>
       )}
 
-      {activeTab === "retraits" ? (
-        /* ===== ONGLET RETRAITS ===== */
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2">
-            <h3 className="text-lg font-semibold text-white mb-4">Demandes en attente ({pending.length})</h3>
-            {loading ? (
-              <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-20 rounded-xl bg-white/5 animate-pulse" />)}</div>
-            ) : pending.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">Aucune demande en attente</p>
-            ) : (
-              <div className="space-y-3">
-                {pending.map((w) => (
-                  <div key={w.id} className="p-4 rounded-xl bg-white/5">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <p className="text-sm font-medium text-white">{w.user?.full_name || "Utilisateur"}</p>
-                        <p className="text-xs text-gray-500">{w.method} • {w.account_info}</p>
-                      </div>
-                      <p className="text-lg font-bold text-yellow-400">{formatCurrency(w.amount)}</p>
-                    </div>
-                    <p className="text-xs text-gray-500 mb-3">{formatDate(w.created_at)}</p>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="default" onClick={() => handleStatus(w.id, "paid")} disabled={actionLoading === w.id}>
-                        {actionLoading === w.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
-                        Payer
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleStatus(w.id, "rejected")} disabled={actionLoading === w.id}>
-                        <X className="w-4 h-4 mr-1" /> Refuser
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Stats */}
+        <Card className="text-center">
+          <ArrowUpFromLine className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+          <p className="text-2xl font-bold text-white">{pending.length}</p>
+          <p className="text-xs text-gray-500">Demandes en attente</p>
+        </Card>
+        <Card className="text-center">
+          <Clock className="w-6 h-6 text-amber-400 mx-auto mb-2" />
+          <p className="text-2xl font-bold text-white">{claimableWithdrawals.length}</p>
+          <p className="text-xs text-gray-500">Réclamations (48h+)</p>
+        </Card>
+        <Card className="text-center">
+          <Check className="w-6 h-6 text-green-400 mx-auto mb-2" />
+          <p className="text-2xl font-bold text-white">{withdrawals.filter((w) => w.status === "paid").length}</p>
+          <p className="text-xs text-gray-500">Retraits payés</p>
+        </Card>
+      </div>
 
-          <Card>
-            <h3 className="text-lg font-semibold text-white mb-4">Tous les retraits</h3>
-            <div className="space-y-2 max-h-[600px] overflow-y-auto">
-              {withdrawals.map((w) => (
-                <div key={w.id} className="p-3 rounded-xl bg-white/5">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs text-white">{w.user?.full_name || "N/A"}</p>
-                    <Badge variant={w.status === "paid" ? "success" : w.status === "rejected" ? "danger" : "warning"} className="text-[10px]">
-                      {getStatusLabel(w.status)}
-                    </Badge>
+      {/* ===== DEMANDES EN ATTENTE ===== */}
+      <Card className="mb-6">
+        <h3 className="text-lg font-semibold text-white mb-4">
+          Demandes en attente ({pending.length})
+          {claimableWithdrawals.length > 0 && (
+            <Badge variant="danger" className="ml-2 text-[10px]">
+              {claimableWithdrawals.length} réclamation(s)
+            </Badge>
+          )}
+        </h3>
+
+        {loading ? (
+          <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-24 rounded-xl bg-white/5 animate-pulse" />)}</div>
+        ) : pending.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">Aucune demande en attente</p>
+        ) : (
+          <div className="space-y-3">
+            {pending.map((w) => {
+              const hoursSince = (new Date().getTime() - new Date(w.created_at).getTime()) / (1000 * 60 * 60);
+              const isClaimable = hoursSince >= 48;
+              return (
+                <div key={w.id} className="p-4 rounded-xl bg-white/5">
+                  {/* En-tête */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                        <User className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-white">
+                          {w.user_profile?.full_name || w.user?.full_name || "Utilisateur"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {w.user_profile?.email || w.user?.email || ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-yellow-400">{formatCurrency(w.amount)}</p>
+                      <Badge variant="warning" className="text-[10px]">En attente</Badge>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-gray-500">{formatCurrency(w.amount)} • {w.method}</p>
+
+                  {/* Infos de paiement */}
+                  <div className="grid grid-cols-2 gap-2 mb-3 p-3 rounded-lg bg-white/5">
+                    <div>
+                      <p className="text-[10px] text-gray-500">Méthode</p>
+                      <p className="text-xs text-white">{w.method}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500">Compte</p>
+                      <p className="text-xs text-white font-mono">{w.account_info}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500">Date demande</p>
+                      <p className="text-xs text-gray-400">{formatDate(w.created_at)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500">
+                        Téléphone utilisateur
+                      </p>
+                      <p className="text-xs text-white">
+                        {w.user_profile?.phone || "Non renseigné"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Badge réclamation si applicable */}
+                  {isClaimable && (
+                    <div className="mb-3 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center gap-2">
+                      <MessageCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span className="text-xs text-amber-400">
+                        Réclamation possible - Retrait en attente depuis plus de 48h
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Boutons d'action */}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() => handleStatus(w.id, "validated")}
+                      disabled={actionLoading === w.id}
+                    >
+                      {actionLoading === w.id ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />}
+                      Validé
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="premium"
+                      onClick={() => handleStatus(w.id, "paid")}
+                      disabled={actionLoading === w.id}
+                    >
+                      {actionLoading === w.id ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />}
+                      Payer
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleStatus(w.id, "rejected")}
+                      disabled={actionLoading === w.id}
+                    >
+                      <X className="w-4 h-4 mr-1" /> Refuser
+                    </Button>
+                    {isClaimable && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setExpandedWithdrawal(expandedWithdrawal === w.id ? null : w.id)}
+                      >
+                        <MessageCircle className="w-4 h-4 mr-1" />
+                        Voir réclamation
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Détail réclamation */}
+                  {expandedWithdrawal === w.id && isClaimable && (
+                    <div className="mt-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/10">
+                      <p className="text-sm font-medium text-amber-400 mb-2">Détails de la réclamation</p>
+                      <div className="space-y-1 text-xs text-gray-400">
+                        <p>• Retrait demandé le {formatDate(w.created_at)}</p>
+                        <p>• Montant : {formatCurrency(w.amount)}</p>
+                        <p>• Méthode : {w.method}</p>
+                        <p>• Compte : {w.account_info}</p>
+                        <p>• Statut actuel : En attente (délai dépassé)</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      {/* ===== RÉCLAMATIONS ===== */}
+      {claimableWithdrawals.length > 0 && (
+        <Card className="mb-6">
+          <button
+            onClick={() => setShowClaims(!showClaims)}
+            className="w-full flex items-center justify-between"
+          >
+            <h3 className="text-lg font-semibold text-white">
+              <MessageCircle className="w-5 h-5 inline mr-2 text-amber-400" />
+              Réclamations ({claimableWithdrawals.length})
+            </h3>
+            {showClaims ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
+          </button>
+
+          {showClaims && (
+            <div className="mt-4 space-y-3">
+              {claimableWithdrawals.map((w) => (
+                <div key={w.id} className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        {w.user_profile?.full_name || w.user?.full_name || "Utilisateur"}
+                      </p>
+                      <p className="text-xs text-gray-500">{w.account_info}</p>
+                    </div>
+                    <p className="text-lg font-bold text-amber-400">{formatCurrency(w.amount)}</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-500">
+                      En attente depuis le {formatDate(w.created_at)}
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="premium"
+                      onClick={() => handleStatus(w.id, "paid")}
+                      disabled={actionLoading === w.id}
+                    >
+                      <Check className="w-4 h-4 mr-1" /> Marquer payé
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
-          </Card>
-        </div>
-      ) : (
-        /* ===== ONGLET DÉPÔT MANUEL ===== */
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2">
-            <h3 className="text-lg font-semibold text-white mb-4">Effectuer un dépôt manuel</h3>
-
-            {depositError && (
-              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{depositError}</div>
-            )}
-            {depositSuccess && (
-              <div className="mb-4 p-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm">{depositSuccess}</div>
-            )}
-
-            {/* Détection du pays */}
-            {geoLoading ? (
-              <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Détection de votre pays...
-              </div>
-            ) : countryInfo ? (
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-white/5 mb-4">
-                <span className="text-2xl">{countryInfo.flag}</span>
-                <div>
-                  <p className="text-sm text-white font-medium">{countryInfo.country}</p>
-                  <p className="text-xs text-gray-500">{countryInfo.dialCode} • {countryInfo.countryCode}</p>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="space-y-4">
-              {/* ID Utilisateur */}
-              <div className="space-y-2">
-                <Label>ID Utilisateur</Label>
-                <div className="flex gap-2">
-                  <Search className="w-5 h-5 text-gray-500 mt-3" />
-                  <Input
-                    placeholder="UUID de l'utilisateur à créditer"
-                    value={depositUserId}
-                    onChange={(e) => setDepositUserId(e.target.value)}
-                  />
-                </div>
-                <p className="text-xs text-gray-500">Entrez l'UUID de l'utilisateur qui recevra le dépôt</p>
-              </div>
-
-              {/* Type de paiement */}
-              <div className="flex gap-2">
-                <Button
-                  variant={depositPaymentType === "mobile" ? "premium" : "outline"}
-                  size="sm"
-                  onClick={() => setDepositPaymentType("mobile")}
-                >
-                  <Smartphone className="w-4 h-4 mr-1" /> Mobile Money
-                </Button>
-                <Button
-                  variant={depositPaymentType === "card" ? "premium" : "outline"}
-                  size="sm"
-                  onClick={() => setDepositPaymentType("card")}
-                >
-                  <Building2 className="w-4 h-4 mr-1" /> Carte Bancaire
-                </Button>
-              </div>
-
-              {/* Montant */}
-              <div className="space-y-2">
-                <Label>Montant (FCFA)</Label>
-                <Input
-                  type="number"
-                  placeholder="50000"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                />
-              </div>
-
-              {/* Opérateurs Mobile Money */}
-              {depositPaymentType === "mobile" && countryInfo && (
-                <div className="space-y-2">
-                  <Label>Opérateur mobile</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {countryInfo.mobileOperators.map((op) => (
-                      <button
-                        key={op.code}
-                        onClick={() => setDepositOperator(op.code)}
-                        className={`p-3 rounded-xl border text-center transition-all ${
-                          depositOperator === op.code
-                            ? "border-blue-500 bg-blue-500/10"
-                            : "border-white/10 bg-white/5 hover:bg-white/10"
-                        }`}
-                      >
-                        <div className="w-8 h-8 mx-auto mb-1 rounded-lg bg-white/10 flex items-center justify-center overflow-hidden">
-                          <img
-                            src={`/images/payments/${countryInfo.countryDir}/${operatorImageMap[op.code] || op.code}.jfif`}
-                            alt={op.name}
-                            className="w-7 h-7 object-contain"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              const parent = target.parentElement;
-                              if (parent) parent.innerHTML = `<span class="text-white font-bold text-xs">${op.name[0]}</span>`;
-                            }}
-                          />
-                        </div>
-                        <p className="text-xs text-white">{op.name}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Cartes bancaires */}
-              {depositPaymentType === "card" && (
-                <div className="space-y-2">
-                  <Label>Carte bancaire</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {cardTypes.map((card) => (
-                      <button
-                        key={card.code}
-                        onClick={() => setDepositCard(card.code)}
-                        className={`p-3 rounded-xl border text-center transition-all ${
-                          depositCard === card.code
-                            ? "border-blue-500 bg-blue-500/10"
-                            : "border-white/10 bg-white/5 hover:bg-white/10"
-                        }`}
-                      >
-                        <div className="w-10 h-8 mx-auto mb-1 rounded-lg bg-white/10 flex items-center justify-center overflow-hidden p-1">
-                          <img
-                            src={`/images/cards/${card.code}.jfif`}
-                            alt={card.name}
-                            className="w-full h-full object-contain"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              const parent = target.parentElement;
-                              if (parent) parent.innerHTML = `<span class="text-white font-bold text-xs">${card.name[0]}</span>`;
-                            }}
-                          />
-                        </div>
-                        <p className="text-xs text-white">{card.name}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Numéro de compte */}
-              <div className="space-y-2">
-                <Label>Numéro de téléphone / compte</Label>
-                <div className="flex gap-2">
-                  {countryInfo && (
-                    <div className="flex items-center gap-1 px-3 rounded-xl bg-white/10 text-sm text-white shrink-0">
-                      <span>{countryInfo.flag}</span>
-                      <span>{countryInfo.dialCode}</span>
-                    </div>
-                  )}
-                  <Input
-                    placeholder="XX XX XX XX"
-                    value={depositAccount}
-                    onChange={(e) => setDepositAccount(e.target.value)}
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-
-              <Button
-                className="w-full"
-                onClick={handleDeposit}
-                disabled={depositSubmitting || !depositAmount || !depositUserId}
-                size="lg"
-              >
-                {depositSubmitting ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Traitement...</>
-                ) : (
-                  <><ArrowDownToLine className="mr-2 w-4 h-4" /> Créditer le compte</>
-                )}
-              </Button>
-            </div>
-          </Card>
-
-          {/* Info */}
-          <Card>
-            <div className="text-center">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 inline-flex mb-4">
-                <Wallet className="w-8 h-8 text-green-400" />
-              </div>
-              <p className="text-sm text-gray-400 mb-1">Dépôt manuel</p>
-              <p className="text-xs text-gray-500 mt-4">
-                Créditez directement le wallet d'un utilisateur. 
-                Le montant sera ajouté à son solde disponible et une transaction sera créée.
-              </p>
-            </div>
-          </Card>
-        </div>
+          )}
+        </Card>
       )}
+
+      {/* ===== DÉPÔT MANUEL ===== */}
+      <Card className="mb-6">
+        <h3 className="text-lg font-semibold text-white mb-4">Dépôt manuel (créditer un utilisateur)</h3>
+
+        {depositError && (
+          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{depositError}</div>
+        )}
+        {depositSuccess && (
+          <div className="mb-4 p-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm">{depositSuccess}</div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label>ID Utilisateur</Label>
+            <div className="flex gap-2">
+              <Search className="w-5 h-5 text-gray-500 mt-3 shrink-0" />
+              <Input placeholder="UUID" value={depositUserId} onChange={(e) => setDepositUserId(e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Montant (FCFA)</Label>
+            <Input type="number" placeholder="50000" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} />
+          </div>
+          <div className="space-y-2 flex items-end">
+            <Button
+              className="w-full"
+              onClick={handleDeposit}
+              disabled={depositSubmitting || !depositAmount || !depositUserId}
+            >
+              {depositSubmitting ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Traitement...</>
+              ) : (
+                <><ArrowUpFromLine className="w-4 h-4 mr-2" /> Créditer</>
+              )}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* ===== HISTORIQUE COMPLET ===== */}
+      <Card>
+        <h3 className="text-lg font-semibold text-white mb-4">Tous les retraits</h3>
+        {loading ? (
+          <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-14 rounded-xl bg-white/5 animate-pulse" />)}</div>
+        ) : (
+          <div className="space-y-2 max-h-[500px] overflow-y-auto">
+            {withdrawals.map((w) => (
+              <div key={w.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-white">{w.user_profile?.full_name || w.user?.full_name || "N/A"}</p>
+                    <p className="text-[10px] text-gray-500">{w.method} • {w.account_info}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <p className="text-sm font-medium text-white">{formatCurrency(w.amount)}</p>
+                  <Badge variant={w.status === "paid" ? "success" : w.status === "rejected" ? "danger" : "warning"} className="text-[10px]">
+                    {getStatusLabel(w.status)}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </AdminLayout>
   );
 }

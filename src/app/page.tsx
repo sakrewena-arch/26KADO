@@ -77,7 +77,6 @@ const footballImages = [
 ];
 
 function EarnMoneyCard({ onEarnClick }: { onEarnClick: () => void }) {
-  const [showDetail, setShowDetail] = useState(false);
   const [copied, setCopied] = useState(false);
   const [simPeople, setSimPeople] = useState(10);
   const [simAmount, setSimAmount] = useState(50000);
@@ -90,11 +89,6 @@ function EarnMoneyCard({ onEarnClick }: { onEarnClick: () => void }) {
     navigator.clipboard.writeText("26KADO");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleButtonClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowDetail(true);
   };
 
   const steps = [
@@ -138,54 +132,14 @@ function EarnMoneyCard({ onEarnClick }: { onEarnClick: () => void }) {
     },
   ];
 
-  if (!showDetail) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative cursor-pointer group"
-      >
-        <Card variant="premium" className="relative overflow-hidden" onClick={handleButtonClick}>
-          <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500 via-orange-500 to-purple-500 rounded-2xl opacity-20 blur-xl group-hover:opacity-40 transition-opacity duration-500" />
-          <div className="relative p-8 lg:p-12 text-center">
-            <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-yellow-500/30">
-                <Wallet className="w-10 h-10 text-white" />
-              </div>
-            </motion.div>
-            <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4">Gagner gratuitement de l'argent</h2>
-            <p className="text-xl text-gray-300 mb-6 max-w-3xl mx-auto">
-              Faites la promotion du site et des codes promo, gagnez 25% de commission sur chaque inscription validée.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Button size="xl" variant="premium" className="animate-pulse-slow" onClick={handleButtonClick}>
-                Découvrir les offres <ChevronRight className="ml-2 w-5 h-5" />
-              </Button>
-              <Badge variant="premium" className="px-4 py-2 text-sm">{user ? "Code 26KADO" : "Nouveau membre"}</Badge>
-            </div>
-            <div className="grid grid-cols-3 gap-4 mt-8 max-w-md mx-auto">
-              {[
-                { value: "50K+", label: "Membres" },
-                { value: "500M+", label: "Gains distribués" },
-                { value: "25%", label: "Commission" },
-              ].map((s, i) => (
-                <div key={i} className="text-center">
-                  <div className="text-lg font-bold text-gradient">{s.value}</div>
-                  <div className="text-xs text-gray-500">{s.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
-      </motion.div>
-    );
-  }
-
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <Card variant="premium" className="p-8 lg:p-10">
         <div className="text-center mb-8">
-          <button onClick={() => setShowDetail(false)} className="text-sm text-gray-500 hover:text-gray-300 mb-4 transition-colors">← Retour</button>
+          <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4">Gagner gratuitement de l'argent</h2>
+          <p className="text-xl text-gray-300 mb-6 max-w-3xl mx-auto">
+            Faites la promotion du site et des codes promo, gagnez 25% de commission sur chaque inscription validée.
+          </p>
           <h2 className="text-3xl lg:text-4xl font-bold text-white mb-2">Votre code promo</h2>
           <p className="text-gray-400 mb-6 max-w-2xl mx-auto">
             Utilisez le code promo <span className="text-yellow-400 font-bold">26KADO</span> et gagnez des offres et bonus uniques.

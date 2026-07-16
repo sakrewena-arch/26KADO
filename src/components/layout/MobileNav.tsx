@@ -11,16 +11,9 @@ interface MobileNavProps {
   onClose: () => void;
 }
 
-const navigation = [
-  { title: "Accueil", href: "/" },
-  { title: "Bookmakers", href: "/#bookmakers" },
-  { title: "Coupons", href: "/coupons" },
-  { title: "Actu Foot", href: "/football-news" },
-  { title: "À propos", href: "/about" },
-  { title: "FAQ", href: "/faq" },
-  { title: "Classement", href: "/leaderboard" },
-  { title: "Contact", href: "/support" },
-];
+import { siteConfig } from "@/config/site";
+
+const navigation = siteConfig.navigation;
 
 export default function MobileNav({ isOpen, onClose }: MobileNavProps) {
   const { user } = useAuth();
