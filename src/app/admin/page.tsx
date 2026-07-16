@@ -12,9 +12,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, Upload, ArrowUpFromLine, Headphones, Coins, TrendingUp, Activity,
   RotateCcw, History, Trash2, RefreshCw, ChevronDown, ChevronUp, AlertTriangle,
-  X, Check, DollarSign, ArrowDownToLine
+  X, Check, DollarSign, ArrowDownToLine, BarChart3
 } from "lucide-react";
 import { CommissionsChart, UsersChart, StatsPieChart } from "@/components/charts/AdminCharts";
+import TrafficChart from "@/components/charts/TrafficChart";
 
 interface ResetLog {
   id: string;
@@ -36,6 +37,7 @@ export default function AdminDashboardPage() {
   const supabase = createClient();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showTraffic, setShowTraffic] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [selectedCounter, setSelectedCounter] = useState<string | "all">("all");
   const [resetLogs, setResetLogs] = useState<ResetLog[]>([]);
@@ -173,6 +175,41 @@ export default function AdminDashboardPage() {
               );
             })}
       </div>
+
+      {/* Bouton Trafic */}
+      <button
+        onClick={() => setShowTraffic(!showTraffic)}
+        className="w-full mb-6 p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 hover:from-blue-500/20 hover:to-purple-500/20 transition-all"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-blue-500/20">
+              <BarChart3 className="w-5 h-5 text-blue-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-medium text-white">Trafic du site</p>
+              <p className="text-xs text-gray-400">Voir les statistiques détaillées par jour, heure, semaine, mois, année</p>
+            </div>
+          </div>
+          <ChevronDown className={`w-5 h-5 text-blue-400 transition-transform ${showTraffic ? "rotate-180" : ""}`} />
+        </div>
+      </button>
+
+      {/* Graphiques trafic */}
+      <AnimatePresence>
+        {showTraffic && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6"
+          >
+            <Card className="p-6">
+              <TrafficChart title="Trafic en temps réel" color1="#10b981" color2="#3b82f6" />
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Compteurs monétaires avec reset */}
       <Card className="mb-6">

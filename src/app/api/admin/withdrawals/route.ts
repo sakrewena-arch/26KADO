@@ -50,15 +50,30 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Paramètres de dépôt invalides" }, { status: 400 });
     }
 
-    // 1. Récupérer le wallet de l'utilisateur cible
-    const { data: userWallet, error: walletError } = await supabase
+    // 1. Récupérer ou créer le wallet de l'utilisateur cible
+    let { data: userWallet, error: walletError } = await supabase
       .from("wallets")
       .select("id, balance, total_earned")
       .eq("user_id", payload.user_id)
       .single();
 
     if (walletError || !userWallet) {
-      return NextResponse.json({ error: "Portefeuille de l'utilisateur introuvable" }, { status: 404 });
+      // Créer le wallet automatiquement
+      const { data: newWallet, error: createError } = await supabase
+        .from("wallets")
+        .insert({
+          user_id: payload.user_id,
+          balance: 0,
+          total_earned: 0,
+          total_withdrawn: 0,
+        })
+        .select("id, balance, total_earned")
+        .single();
+
+      if (createError || !newWallet) {
+        return NextResponse.json({ error: "Impossible de créer le portefeuille" }, { status: 500 });
+      }
+      userWallet = newWallet;
     }
 
     // 2. Créditer le wallet de l'utilisateur

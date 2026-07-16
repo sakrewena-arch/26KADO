@@ -266,19 +266,51 @@ export async function getStats(): Promise<SiteStats> {
 // ADMIN QUERIES
 // ============================================
 export async function getAdminStats() {
-  const { data: users } = await supabase.from("profiles").select("id", { count: "exact", head: true });
-  const { data: pendingUploads } = await supabase.from("uploads").select("id", { count: "exact", head: true }).eq("status", "pending");
-  const { data: pendingWithdrawals } = await supabase.from("withdrawal_requests").select("id", { count: "exact", head: true }).eq("status", "pending");
-  const { data: openTickets } = await supabase.from("support_tickets").select("id", { count: "exact", head: true }).eq("status", "open");
-  const { data: commissions } = await supabase.from("commissions").select("amount");
+  // Compter les utilisateurs
+  const { count: totalUsers } = await supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true });
+
+  // Compter les validations en attente
+  const { count: pendingUploads } = await supabase
+    .from("uploads")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "pending");
+
+  // Compter les retraits en attente
+  const { count: pendingWithdrawals } = await supabase
+    .from("withdrawal_requests")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "pending");
+
+  // Compter les tickets ouverts
+  const { count: openTickets } = await supabase
+    .from("support_tickets")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "open");
+
+  // Commissions totales
+  const { data: commissions } = await supabase
+    .from("commissions")
+    .select("amount");
   const totalCommissions = (commissions || []).reduce((sum, c) => sum + Number(c.amount), 0);
 
+  // Stats financières depuis le cache admin_stats
+  const { data: statRow } = await supabase
+    .from("admin_stats")
+    .select("*")
+    .eq("id", 1)
+    .single();
+
   return {
-    total_users: users?.length || 0,
-    pending_uploads: pendingUploads?.length || 0,
-    pending_withdrawals: pendingWithdrawals?.length || 0,
-    open_tickets: openTickets?.length || 0,
+    total_users: totalUsers || 0,
+    pending_uploads: pendingUploads || 0,
+    pending_withdrawals: pendingWithdrawals || 0,
+    open_tickets: openTickets || 0,
     total_commissions: totalCommissions,
+    total_withdrawals: statRow?.total_withdrawals || 0,
+    total_deposits: statRow?.total_deposits || 0,
+    total_revenue: statRow?.total_revenue || 0,
   };
 }
 

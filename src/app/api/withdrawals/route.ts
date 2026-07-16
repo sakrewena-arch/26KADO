@@ -38,15 +38,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  // Récupérer le wallet
-  const { data: wallet, error: walletError } = await supabase
+  // Récupérer ou créer le wallet
+  let { data: wallet, error: walletError } = await supabase
     .from("wallets")
     .select("*")
     .eq("user_id", user.id)
     .single();
 
   if (walletError || !wallet) {
-    return NextResponse.json({ error: "Portefeuille introuvable" }, { status: 404 });
+    // Créer le wallet automatiquement
+    const { data: newWallet, error: createError } = await supabase
+      .from("wallets")
+      .insert({
+        user_id: user.id,
+        balance: 0,
+        total_earned: 0,
+        total_withdrawn: 0,
+      })
+      .select("*")
+      .single();
+
+    if (createError || !newWallet) {
+      return NextResponse.json({ error: "Impossible de créer le portefeuille" }, { status: 500 });
+    }
+    wallet = newWallet;
   }
 
   if (Number(wallet.balance) < payload.amount) {

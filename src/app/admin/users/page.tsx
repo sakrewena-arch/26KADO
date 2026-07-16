@@ -252,27 +252,37 @@ export default function AdminUsersPage() {
                     <p className="text-xs text-gray-500">{u.email}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-4 text-xs text-gray-400 mr-2">
-                    <span>Com: {formatCurrency(u.total_commission)}</span>
-                    <span>Filleuls: {u.total_referrals}</span>
-                    <span>{formatDate(u.created_at)}</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                    <span className="hidden sm:inline">Com:</span><span className="sm:hidden">C:</span>{formatCurrency(u.total_commission)}
+                    <span className="hidden sm:inline">• Filleuls:</span><span className="sm:hidden">• F:</span>{u.total_referrals}
                   </div>
-                  <Badge variant={u.is_active ? "success" : "danger"} className="text-[10px]">
-                    {u.is_active ? "Actif" : "Banni"}
-                  </Badge>
-                  {u.role !== "super_admin" && (
-                    <>
-                      <Button size="sm" variant={u.is_active ? "destructive" : "default"} onClick={() => handleBan(u.id, u.is_active)} disabled={actionLoading === u.id}>
-                        <Ban className="w-3 h-3 mr-1" /> {u.is_active ? "Bannir" : "Réactiver"}
-                      </Button>
-                      {profile?.role === "super_admin" && (
-                        <Button size="sm" variant="ghost" onClick={() => handleDelete(u.id)} disabled={actionLoading === u.id}>
-                          <Trash2 className="w-3 h-3 text-red-400" />
-                        </Button>
-                      )}
-                    </>
-                  )}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Badge variant={u.is_active ? "success" : "danger"} className="text-[9px] px-1.5 py-0.5 whitespace-nowrap">
+                      {u.is_active ? "Actif" : "Banni"}
+                    </Badge>
+                    {u.role !== "super_admin" && (
+                      <>
+                        {u.is_active ? (
+                          <button onClick={() => handleBan(u.id, u.is_active)} disabled={actionLoading === u.id}
+                            className="p-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors" title="Bannir">
+                            <Ban className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          <button onClick={() => handleBan(u.id, u.is_active)} disabled={actionLoading === u.id}
+                            className="p-1 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors" title="Réactiver">
+                            <CheckSquare className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {profile?.role === "super_admin" && (
+                          <button onClick={() => handleDelete(u.id)} disabled={actionLoading === u.id}
+                            className="p-1 rounded-lg bg-gray-500/20 text-gray-400 hover:bg-red-500/30 hover:text-red-400 transition-colors" title="Supprimer">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
