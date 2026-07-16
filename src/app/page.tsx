@@ -101,7 +101,7 @@ function EarnMoneyCard({ onEarnClick }: { onEarnClick: () => void }) {
     {
       icon: Camera,
       title: "2. Faire une capture d'écran",
-      desc: "Inscrivez-vous chez nos partenaires avec le code promo 26KADO et faites une capture de votre inscription et dépôt.",
+      desc: "Inscrivez-vous chez nos programmess avec le code promo 26KADO et faites une capture de votre inscription et dépôt.",
       color: "from-purple-500 to-purple-600",
     },
     {
@@ -280,7 +280,7 @@ export default function HomePage() {
               {[
                 { value: 50000, suffix: "+", label: "Membres actifs" },
                 { value: 500, suffix: "M+", label: "FCFA distribués" },
-                { value: 4, suffix: "", label: "Partenaires" },
+                { value: 4, suffix: "", label: "programmess" },
                 { value: 98, suffix: "%", label: "Satisfaction" },
               ].map((stat, i) => (
                 <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + i * 0.1 }} className="glass-card rounded-2xl p-4">

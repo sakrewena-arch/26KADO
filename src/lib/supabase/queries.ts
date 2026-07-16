@@ -295,12 +295,27 @@ export async function getAdminStats() {
     .select("amount");
   const totalCommissions = (commissions || []).reduce((sum, c) => sum + Number(c.amount), 0);
 
-  // Stats financières depuis le cache admin_stats
-  const { data: statRow } = await supabase
-    .from("admin_stats")
+  // Stats financières depuis la table settings
+  const COUNTER_KEYS = ["total_commissions", "total_withdrawals", "total_deposits", "total_revenue"];
+  const { data: settingsData } = await supabase
+    .from("settings")
     .select("*")
-    .eq("id", 1)
-    .single();
+    .in("key", COUNTER_KEYS);
+
+  const counters: Record<string, number> = {
+    total_commissions: 0,
+    total_withdrawals: 0,
+    total_deposits: 0,
+    total_revenue: 0,
+  };
+
+  if (settingsData) {
+    settingsData.forEach((s: any) => {
+      if (s.key in counters) {
+        counters[s.key] = Number(s.value) || 0;
+      }
+    });
+  }
 
   return {
     total_users: totalUsers || 0,
@@ -308,9 +323,9 @@ export async function getAdminStats() {
     pending_withdrawals: pendingWithdrawals || 0,
     open_tickets: openTickets || 0,
     total_commissions: totalCommissions,
-    total_withdrawals: statRow?.total_withdrawals || 0,
-    total_deposits: statRow?.total_deposits || 0,
-    total_revenue: statRow?.total_revenue || 0,
+    total_withdrawals: counters.total_withdrawals,
+    total_deposits: counters.total_deposits,
+    total_revenue: counters.total_revenue,
   };
 }
 

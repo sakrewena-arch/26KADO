@@ -152,6 +152,7 @@ export default function AdminWithdrawalsPage() {
     try {
       const res = await fetch("/api/admin/reset-counters", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ counter: confirmTarget }),
       });
@@ -174,6 +175,7 @@ export default function AdminWithdrawalsPage() {
       if (!log) return;
       const res = await fetch("/api/admin/reset-counters", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ counter: log.counter_type, restore: true, log_id: logId }),
       });
@@ -201,6 +203,7 @@ export default function AdminWithdrawalsPage() {
     }
   };
 
+
   const handleResetEverything = async () => {
     if (!dangerEmail || !dangerPassword) {
       setDangerError("Veuillez renseigner l'email et le mot de passe admin.");
@@ -211,6 +214,7 @@ export default function AdminWithdrawalsPage() {
     try {
       const res = await fetch("/api/admin/reset-everything", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: dangerEmail.trim(), password: dangerPassword }),
       });

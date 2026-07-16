@@ -1,105 +1,80 @@
-import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
-
-const anonUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(request: NextRequest) {
   const payload = await request.json().catch(() => null);
-  if (!payload || !payload.email || !payload.password) {
-    return NextResponse.json({ error: "Email et mot de passe admin requis" }, { status: 400 });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll(); },
+        setAll() { /* no-op */ },
+      },
+    }
+  );
+
+  // Vérifier l'authentification admin
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  if (!anonUrl || !anonKey || !serviceRoleKey) {
-    return NextResponse.json({ error: "Configuration Supabase manquante" }, { status: 500 });
-  }
-
-  const authClient = createClient(anonUrl, anonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-
-  const { data: authData, error: authError } = await authClient.auth.signInWithPassword({
-    email: String(payload.email).trim().toLowerCase(),
-    password: String(payload.password),
-  });
-
-  if (authError || !authData?.user) {
-    return NextResponse.json({ error: "Identifiants admin invalides" }, { status: 401 });
-  }
-
-  const { data: profile, error: profileError } = await authClient
+  const { data: profile } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", authData.user.id)
+    .eq("id", user.id)
     .single();
 
-  if (profileError || !profile || !["super_admin", "admin"].includes(profile.role)) {
+  if (!profile || !["super_admin", "admin", "moderator"].includes(profile.role)) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  const adminClient = createClient(anonUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-
-  const operations = [
-    adminClient.from("withdrawal_requests").delete().neq("id", "0"),
-    adminClient.from("commissions").delete().neq("id", "0"),
-    adminClient.from("wallet_transactions").delete().neq("id", "0"),
-    adminClient.from("payment_transactions").delete().neq("id", "0"),
-    adminClient.from("admin_counter_logs").delete().neq("id", "0"),
-    adminClient.from("wallets").update({ balance: 0, total_earned: 0, total_withdrawn: 0 }),
-    adminClient.from("profiles").update({
-      total_commission: 0,
-      total_referrals: 0,
-      total_validations: 0,
-      total_clicks: 0,
-    }),
-  ];
-
-  const results = [];
-  for (const op of operations) {
-    const result = await op;
-    if (result.error) {
-      results.push(result.error.message);
+  // Si email et password sont fournis, vérifier les credentials admin
+  if (payload?.email && payload?.password) {
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: payload.email,
+      password: payload.password,
+    });
+    if (signInError) {
+      return NextResponse.json({ error: "Identifiants admin incorrects" }, { status: 401 });
     }
   }
 
-  const adminStatsResponse = await adminClient
-    .from("admin_stats")
-    .select("id")
-    .eq("id", 1)
-    .single();
+  // Réinitialiser tous les compteurs à 0 dans settings
+  const COUNTER_KEYS = ["total_commissions", "total_withdrawals", "total_deposits", "total_revenue"];
 
-  if (adminStatsResponse.error && adminStatsResponse.error.code !== "PGRST116") {
-    results.push(adminStatsResponse.error.message);
+  // Sauvegarder les logs avant reset
+  const { data: settingsData } = await supabase
+    .from("settings")
+    .select("*")
+    .in("key", COUNTER_KEYS);
+
+  const timestamp = Date.now();
+  if (settingsData) {
+    for (const s of settingsData) {
+      await supabase.from("settings").upsert({
+        key: `log_${timestamp}_${s.key}`,
+        value: JSON.stringify({
+          counter_type: s.key,
+          previous_value: Number(s.value) || 0,
+          new_value: 0,
+          reset_by: user.id,
+          timestamp,
+        }),
+        type: "string",
+      });
+    }
   }
 
-  if (!adminStatsResponse.data) {
-    const insertStats = await adminClient
-      .from("admin_stats")
-      .insert({ id: 1, total_withdrawals: 0, total_deposits: 0, total_revenue: 0 });
-    if (insertStats.error) results.push(insertStats.error.message);
-  } else {
-    const updateStats = await adminClient
-      .from("admin_stats")
-      .update({ total_withdrawals: 0, total_deposits: 0, total_revenue: 0 })
-      .eq("id", 1);
-    if (updateStats.error) results.push(updateStats.error.message);
-  }
-
-  if (results.length > 0) {
-    return NextResponse.json({ error: "Erreur lors de la réinitialisation totale", details: results }, { status: 500 });
+  // Mettre tous les compteurs à 0
+  for (const key of COUNTER_KEYS) {
+    await supabase.from("settings").upsert({ key, value: "0", type: "number" });
   }
 
   return NextResponse.json({
     success: true,
-    message: "Réinitialisation totale effectuée : compteurs remis à zéro et données financières supprimées.",
+    message: "Tous les compteurs ont été remis à zéro",
   });
 }

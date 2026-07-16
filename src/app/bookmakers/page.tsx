@@ -257,7 +257,7 @@ export default function BookmakersPage() {
           >
             <Badge variant="premium" className="mb-4 px-4 py-1.5 text-sm">
               <Trophy className="w-4 h-4 mr-1" />
-              Bookmakers Partenaires
+              Bookmakers programmess
             </Badge>
             <h1 className="text-4xl lg:text-6xl font-bold text-white mb-4">
               Inscrivez-vous avec le code <span className="text-gradient">26KADO</span>

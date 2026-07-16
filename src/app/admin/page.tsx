@@ -61,12 +61,30 @@ export default function AdminDashboardPage() {
 
   const loadResetLogs = useCallback(async () => {
     try {
+      // Lire les logs depuis settings (préfixe log_)
       const { data } = await supabase
-        .from("admin_counter_logs")
+        .from("settings")
         .select("*")
-        .order("created_at", { ascending: false })
+        .ilike("key", "log_%")
         .limit(50);
-      if (data) setResetLogs(data as ResetLog[]);
+      if (data) {
+        const logs: ResetLog[] = data
+          .map((s: any) => {
+            try {
+              const parsed = JSON.parse(s.value);
+              return {
+                id: s.key.replace("log_", ""),
+                counter_type: parsed.counter_type,
+                previous_value: parsed.previous_value,
+                new_value: parsed.new_value,
+                reset_by: parsed.reset_by,
+                created_at: new Date(parsed.timestamp).toISOString(),
+              };
+            } catch { return null; }
+          })
+          .filter(Boolean) as ResetLog[];
+        setResetLogs(logs);
+      }
     } catch (err) {
       console.error("Erreur chargement logs:", err);
     }
@@ -80,10 +98,15 @@ export default function AdminDashboardPage() {
     try {
       const res = await fetch("/api/admin/reset-counters", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ counter: confirmTarget }),
       });
-      if (!res.ok) throw new Error("Erreur lors du reset");
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => null);
+        console.error("reset-counters failed", res.status, errBody);
+        throw new Error("Erreur lors du reset");
+      }
       await loadStats();
       await loadResetLogs();
       setShowConfirmModal(false);
@@ -102,10 +125,15 @@ export default function AdminDashboardPage() {
       if (!log) return;
       const res = await fetch("/api/admin/reset-counters", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ counter: log.counter_type, restore: true, log_id: logId }),
       });
-      if (!res.ok) throw new Error("Erreur lors de la restauration");
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => null);
+        console.error("reset-counters restore failed", res.status, errBody);
+        throw new Error("Erreur lors de la restauration");
+      }
       await loadStats();
       await loadResetLogs();
       setShowConfirmModal(false);
@@ -119,7 +147,7 @@ export default function AdminDashboardPage() {
   const handleClearHistory = async () => {
     setActionLoading(true);
     try {
-      await supabase.from("admin_counter_logs").delete().neq("id", "0");
+      await supabase.from("settings").delete().ilike("key", "log_%");
       setResetLogs([]);
       setShowConfirmModal(false);
     } catch (err) {
@@ -320,7 +348,7 @@ export default function AdminDashboardPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
               <span className="text-sm text-gray-400">Taux de conversion</span>
-              <span className="text-sm font-medium text-green-400">~15%</span>
+              <span className="text-sm font-medium text-green-400">~25%</span>
             </div>
             <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
               <span className="text-sm text-gray-400">Commission moyenne</span>

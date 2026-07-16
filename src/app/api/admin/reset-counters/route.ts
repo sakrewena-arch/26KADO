@@ -23,7 +23,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  // Vérifier que l'utilisateur est admin
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -36,76 +35,80 @@ export async function POST(request: NextRequest) {
 
   const { counter, restore, log_id } = payload;
 
-  // Si c'est une restauration
+  // ====== UTILISATION DE LA TABLE settings (déjà existante) ======
+  // Les compteurs sont stockés dans settings avec les clés :
+  // total_commissions, total_withdrawals, total_deposits, total_revenue
+
+  const COUNTER_KEYS = ["total_commissions", "total_withdrawals", "total_deposits", "total_revenue"];
+
+  // Restauration
   if (restore && log_id) {
-    const { data: log } = await supabase
-      .from("admin_counter_logs")
+    // Récupérer la valeur sauvegardée dans un log (stocké dans settings aussi)
+    const { data: logData } = await supabase
+      .from("settings")
       .select("*")
-      .eq("id", log_id)
+      .eq("key", `log_${log_id}`)
       .single();
 
-    if (!log) {
+    if (!logData) {
       return NextResponse.json({ error: "Log introuvable" }, { status: 404 });
     }
 
-    // Restaurer la valeur précédente dans admin_stats
-    const { error: updateError } = await supabase
-      .from("admin_stats")
-      .update({ [log.counter_type]: log.previous_value })
-      .eq("id", 1);
+    const logEntry = JSON.parse(logData.value);
+    await supabase.from("settings").upsert({
+      key: logEntry.counter_type,
+      value: String(logEntry.previous_value),
+      type: "number",
+    });
 
-    if (updateError) {
-      return NextResponse.json({ error: "Erreur lors de la restauration" }, { status: 500 });
-    }
-
-    // Supprimer le log
-    await supabase.from("admin_counter_logs").delete().eq("id", log_id);
+    await supabase.from("settings").delete().eq("key", `log_${log_id}`);
 
     return NextResponse.json({ success: true, message: "Compteur restauré" });
   }
 
-  // Reset des compteurs
-  const { data: currentStats } = await supabase
-    .from("admin_stats")
+  // Récupérer les valeurs actuelles
+  const { data: settingsData } = await supabase
+    .from("settings")
     .select("*")
-    .eq("id", 1)
-    .single();
+    .in("key", COUNTER_KEYS);
 
-  if (!currentStats) {
-    return NextResponse.json({ error: "Stats introuvables" }, { status: 404 });
+  const currentValues: Record<string, number> = {};
+  if (settingsData) {
+    settingsData.forEach((s: any) => {
+      currentValues[s.key] = Number(s.value) || 0;
+    });
   }
 
-  const countersToReset = counter === "all"
-    ? ["total_commissions", "total_withdrawals", "total_deposits", "total_revenue"]
-    : [counter];
-
-  const logs = countersToReset.map((c: string) => ({
-    counter_type: c,
-    previous_value: currentStats[c] || 0,
-    new_value: 0,
-    reset_by: user.id,
-  }));
-
-  // Créer les logs
-  const { error: logError } = await supabase
-    .from("admin_counter_logs")
-    .insert(logs);
-
-  if (logError) {
-    return NextResponse.json({ error: "Erreur lors de la création des logs" }, { status: 500 });
+  // S'assurer que toutes les clés existent
+  for (const key of COUNTER_KEYS) {
+    if (!(key in currentValues)) {
+      currentValues[key] = 0;
+      await supabase.from("settings").upsert({ key, value: "0", type: "number" });
+    }
   }
 
-  // Mettre à jour les compteurs
-  const updates: Record<string, number> = {};
-  countersToReset.forEach((c: string) => { updates[c] = 0; });
+  const countersToReset = counter === "all" ? COUNTER_KEYS : [counter];
 
-  const { error: updateError } = await supabase
-    .from("admin_stats")
-    .update(updates)
-    .eq("id", 1);
+  // Sauvegarder les logs (dans settings avec préfixe log_)
+  const timestamp = Date.now();
+  for (const c of countersToReset) {
+    const logEntry = {
+      counter_type: c,
+      previous_value: currentValues[c] || 0,
+      new_value: 0,
+      reset_by: user.id,
+      timestamp,
+    };
+    await supabase.from("settings").upsert({
+      key: `log_${timestamp}_${c}`,
+      value: JSON.stringify(logEntry),
+      type: "string",
+    });
+  }
 
-  if (updateError) {
-    return NextResponse.json({ error: "Erreur lors de la mise à jour" }, { status: 500 });
+  // Mettre à jour les compteurs à 0
+  for (const c of countersToReset) {
+    await supabase.from("settings").upsert({ key: c, value: "0", type: "number" });
   }
 
   return NextResponse.json({
