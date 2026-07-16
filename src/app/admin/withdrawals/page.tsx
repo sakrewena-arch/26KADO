@@ -7,23 +7,46 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getAllWithdrawals } from "@/lib/supabase/queries";
+import { getAllWithdrawals, getAdminStats } from "@/lib/supabase/queries";
 import { formatCurrency, formatDate, getStatusLabel } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, ArrowUpFromLine, Loader2, Search, ChevronDown, ChevronUp, User, MessageCircle, Clock, AlertTriangle } from "lucide-react";
+import { Check, X, ArrowUpFromLine, Loader2, Search, ChevronDown, ChevronUp, User, MessageCircle, Clock, AlertTriangle, RotateCcw, History, Trash2, RefreshCw } from "lucide-react";
 import type { WithdrawalRequest, Profile } from "@/types";
 import { PeriodFilter, filterByPeriod, type Period } from "@/components/ui/period-filter";
+
+interface ResetLog {
+  id: string;
+  counter_type: string;
+  previous_value: number;
+  new_value: number;
+  reset_by: string;
+  created_at: string;
+}
 
 export default function AdminWithdrawalsPage() {
   const supabase = createClient();
   const [withdrawals, setWithdrawals] = useState<(WithdrawalRequest & { user_profile?: Profile })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<any>(null);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [selectedCounter, setSelectedCounter] = useState<string | "all">("all");
+  const [resetLogs, setResetLogs] = useState<ResetLog[]>([]);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<"reset" | "restore" | "clear" | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showDangerModal, setShowDangerModal] = useState(false);
+  const [dangerEmail, setDangerEmail] = useState("");
+  const [dangerPassword, setDangerPassword] = useState("");
+  const [dangerError, setDangerError] = useState<string | null>(null);
+  const [dangerSubmitting, setDangerSubmitting] = useState(false);
+  const [dangerSuccess, setDangerSuccess] = useState<string | null>(null);
 
   // Modal de confirmation
   const [showModal, setShowModal] = useState(false);
-  const [modalAction, setModalAction] = useState<"validated" | "paid" | "rejected" | null>(null);
+  const [modalAction, setModalAction] = useState<"paid" | "rejected" | null>(null);
   const [modalTargetId, setModalTargetId] = useState<string | null>(null);
   const [modalSuccess, setModalSuccess] = useState<string | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -46,9 +69,32 @@ export default function AdminWithdrawalsPage() {
   const [showRejected, setShowRejected] = useState(false);
   const [showClaims, setShowClaims] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showResetHistory, setShowResetHistory] = useState(false);
 
   const [claimableWithdrawals, setClaimableWithdrawals] = useState<(WithdrawalRequest & { user_profile?: Profile })[]>([]);
   const [period, setPeriod] = useState<Period>("month");
+
+  const loadStats = useCallback(async () => {
+    try {
+      const data = await getAdminStats();
+      setStats(data);
+    } catch (err) {
+      console.error("Erreur chargement stats:", err);
+    }
+  }, []);
+
+  const loadResetLogs = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from("admin_counter_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (data) setResetLogs(data as ResetLog[]);
+    } catch (err) {
+      console.error("Erreur chargement logs:", err);
+    }
+  }, [supabase]);
 
   const loadWithdrawals = useCallback(async () => {
     try {
@@ -76,7 +122,7 @@ export default function AdminWithdrawalsPage() {
     }
   }, [supabase]);
 
-  useEffect(() => { loadWithdrawals(); }, [loadWithdrawals]);
+  useEffect(() => { loadStats(); loadResetLogs(); loadWithdrawals(); }, [loadStats, loadResetLogs, loadWithdrawals]);
 
   useEffect(() => {
     const now = new Date();
@@ -86,12 +132,102 @@ export default function AdminWithdrawalsPage() {
     }));
   }, [withdrawals]);
 
-  const openModal = (id: string, action: "validated" | "paid" | "rejected") => {
+  const openModal = (id: string, action: "paid" | "rejected") => {
     setModalTargetId(id);
     setModalAction(action);
     setModalSuccess(null);
     setModalError(null);
     setShowModal(true);
+  };
+
+  const openConfirm = (action: "reset" | "restore" | "clear", target: string | null = null) => {
+    setConfirmAction(action);
+    setConfirmTarget(target);
+    setShowConfirmModal(true);
+  };
+
+  const handleReset = async () => {
+    if (!confirmTarget) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/admin/reset-counters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ counter: confirmTarget }),
+      });
+      if (!res.ok) throw new Error("Erreur lors du reset");
+      await loadStats();
+      await loadResetLogs();
+      setShowConfirmModal(false);
+      setShowResetModal(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRestore = async (logId: string) => {
+    setActionLoading(true);
+    try {
+      const log = resetLogs.find(l => l.id === logId);
+      if (!log) return;
+      const res = await fetch("/api/admin/reset-counters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ counter: log.counter_type, restore: true, log_id: logId }),
+      });
+      if (!res.ok) throw new Error("Erreur lors de la restauration");
+      await loadStats();
+      await loadResetLogs();
+      setShowConfirmModal(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleClearHistory = async () => {
+    setActionLoading(true);
+    try {
+      await supabase.from("admin_counter_logs").delete().neq("id", "0");
+      setResetLogs([]);
+      setShowConfirmModal(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleResetEverything = async () => {
+    if (!dangerEmail || !dangerPassword) {
+      setDangerError("Veuillez renseigner l'email et le mot de passe admin.");
+      return;
+    }
+    setDangerSubmitting(true);
+    setDangerError(null);
+    try {
+      const res = await fetch("/api/admin/reset-everything", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: dangerEmail.trim(), password: dangerPassword }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error((data && data.error) || "Erreur lors de la réinitialisation totale");
+      setDangerSuccess("Réinitialisation totale appliquée avec succès.");
+      setShowDangerModal(false);
+      setDangerEmail("");
+      setDangerPassword("");
+      await loadStats();
+      await loadResetLogs();
+      await loadWithdrawals();
+    } catch (err: any) {
+      setDangerError(err.message || "Erreur lors de la réinitialisation totale");
+    } finally {
+      setDangerSubmitting(false);
+    }
   };
 
   const executeAction = async () => {
@@ -101,17 +237,23 @@ export default function AdminWithdrawalsPage() {
     try {
       const res = await fetch("/api/admin/withdrawals", {
         method: "PATCH",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ withdrawal_id: modalTargetId, status: modalAction }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erreur");
-      setModalSuccess(
-        modalAction === "paid" ? "✅ Paiement confirmé ! Statut mis à jour."
-        : modalAction === "validated" ? "✅ Validation confirmée !"
-        : "✅ Demande refusée."
-      );
-      await loadWithdrawals();
+      console.log("[admin/withdrawals] request sent", { withdrawal_id: modalTargetId, status: modalAction });
+      console.log("[admin/withdrawals] response status", res.status, "ok:", res.ok);
+      const data = await res.json().catch((e) => {
+        console.error("[admin/withdrawals] failed to parse JSON", e);
+        return null;
+      });
+      console.log("[admin/withdrawals] response body", data);
+      if (!res.ok) throw new Error((data && data.error) || "Erreur");
+      setModalSuccess(modalAction === "paid" ? "✅ Paiement confirmé ! Statut mis à jour." : "✅ Demande refusée.");
+      // Optimistic update: update local state immediately so UI reflects change
+      setWithdrawals((prev) => prev.map((w) => (w.id === modalTargetId ? { ...w, status: modalAction } : w)));
+      // Refresh from server in background (non-blocking)
+      loadWithdrawals().catch(() => { /* ignore background refresh errors */ });
     } catch (err: any) {
       setModalError(err.message || "Erreur");
     } finally {
@@ -144,6 +286,7 @@ export default function AdminWithdrawalsPage() {
     try {
       const res = await fetch("/api/admin/withdrawals", {
         method: "PATCH",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: depositUser.id, amount: Number(depositAmount), status: "deposit" }),
       });
@@ -183,10 +326,22 @@ export default function AdminWithdrawalsPage() {
   );
 
   const modalMessages: Record<string, { title: string; msg: string; icon: any; bg: string }> = {
-    validated: { title: "Confirmer la validation", msg: "Vous confirmez avoir vérifié manuellement ?", icon: <Check className="w-7 h-7 text-blue-400" />, bg: "bg-blue-500/20" },
     paid: { title: "Confirmer le paiement", msg: "Avez-vous bien envoyé l'argent manuellement ?", icon: <Check className="w-7 h-7 text-green-400" />, bg: "bg-green-500/20" },
     rejected: { title: "Confirmer le refus", msg: "Êtes-vous sûr de vouloir refuser ?", icon: <X className="w-7 h-7 text-red-400" />, bg: "bg-red-500/20" },
   };
+
+  const confirmMessages: Record<string, { title: string; message: string }> = {
+    reset: { title: "Confirmer la remise à zéro", message: `Êtes-vous sûr de vouloir remettre à zéro le compteur sélectionné ? Cette action est réversible via l'historique.` },
+    restore: { title: "Restaurer le compteur", message: `Voulez-vous restaurer la valeur précédente de ce compteur ?` },
+    clear: { title: "Vider l'historique", message: `Êtes-vous sûr de vouloir supprimer tout l'historique des remises à zéro ? Cette action est irréversible.` },
+  };
+
+  const counterCards = [
+    { key: "total_commissions", title: "Commissions", value: stats?.total_commissions || 0, label: "Commissions", color: "from-green-500/20 to-emerald-500/20 text-green-400" },
+    { key: "total_withdrawals", title: "Retraits", value: stats?.total_withdrawals || 0, label: "Retraits", color: "from-orange-500/20 to-red-500/20 text-orange-400" },
+    { key: "total_deposits", title: "Dépôts", value: stats?.total_deposits || 0, label: "Dépôts", color: "from-blue-500/20 to-cyan-500/20 text-blue-400" },
+    { key: "total_revenue", title: "Revenus", value: stats?.total_revenue || 0, label: "Revenus", color: "from-purple-500/20 to-pink-500/20 text-purple-400" },
+  ];
 
   return (
     <AdminLayout title="Gestion des retraits">
@@ -249,6 +404,244 @@ export default function AdminWithdrawalsPage() {
         <Card className="text-center p-4"><X className="w-5 h-5 text-red-400 mx-auto mb-1" /><p className="text-2xl font-bold text-white">{rejected.length}</p><p className="text-xs text-gray-500">Rejetées</p></Card>
       </div>
 
+      <Card className="mb-6">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-white">Compteurs financiers</h3>
+            <p className="text-sm text-gray-400">Remise à zéro des compteurs et historique des changements.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => { setSelectedCounter("all"); setShowResetModal(true); }}>
+              <RotateCcw className="w-4 h-4 mr-1" /> Remettre à zéro
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowResetHistory(!showResetHistory)}>
+              <History className="w-4 h-4 mr-1" /> {showResetHistory ? "Masquer l'historique" : "Historique"}
+            </Button>
+            <Button size="sm" variant="destructive" onClick={() => setShowDangerModal(true)}>
+              <AlertTriangle className="w-4 h-4 mr-1" /> Réinitialisation totale
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {counterCards.map((counter) => (
+            <Card key={counter.key} className="cursor-pointer" onClick={() => { setSelectedCounter(counter.key); setShowResetModal(true); }}>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs text-gray-400">{counter.label}</p>
+                  <p className="text-xl font-bold text-white mt-1">{typeof counter.value === "number" ? formatCurrency(counter.value) : counter.value}</p>
+                </div>
+                <div className={`p-2 rounded-lg bg-gradient-to-br ${counter.color}`}>
+                  <RotateCcw className="w-4 h-4" />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </Card>
+
+      <AnimatePresence>
+        {showResetHistory && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-6">
+            <Card>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Historique des remises à zéro</h3>
+                  <p className="text-sm text-gray-400">Restaurer ou vider l'historique des compteurs.</p>
+                </div>
+                {resetLogs.length > 0 && (
+                  <Button size="sm" variant="destructive" onClick={() => openConfirm("clear") }>
+                    <Trash2 className="w-4 h-4 mr-1" /> Vider l'historique
+                  </Button>
+                )}
+              </div>
+              {resetLogs.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-6">Aucun historique</p>
+              ) : (
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {resetLogs.map((log) => (
+                    <div key={log.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-amber-500/20">
+                          <RotateCcw className="w-4 h-4 text-amber-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-white font-medium">{log.counter_type}</p>
+                          <p className="text-xs text-gray-500">{formatCurrency(log.previous_value)} → {formatCurrency(log.new_value)}</p>
+                          <p className="text-[10px] text-gray-600">{formatDate(log.created_at)}</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => openConfirm("restore", log.id)}>
+                        <RefreshCw className="w-3 h-3 mr-1" /> Restaurer
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Sélecteur de remise à zéro */}
+      <AnimatePresence>
+        {showDangerModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => { if (!dangerSubmitting) setShowDangerModal(false); }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl bg-card border border-white/10 p-6 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-white">Réinitialisation totale</h3>
+                  <p className="text-sm text-gray-400">Saisissez les identifiants admin pour confirmer.</p>
+                </div>
+                <button onClick={() => setShowDangerModal(false)} className="text-gray-500 hover:text-white" disabled={dangerSubmitting}>
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="mb-4 rounded-2xl bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-200">
+                Cette action supprime toutes les données financières utilisateurs et remet tous les compteurs à zéro. Elle est irréversible.
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="danger-email">Email admin</Label>
+                  <Input id="danger-email" type="email" value={dangerEmail} onChange={(e) => setDangerEmail(e.target.value)} placeholder="admin@example.com" />
+                </div>
+                <div>
+                  <Label htmlFor="danger-password">Mot de passe admin</Label>
+                  <Input id="danger-password" type="password" value={dangerPassword} onChange={(e) => setDangerPassword(e.target.value)} placeholder="Mot de passe" />
+                </div>
+                {dangerError && <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-300">{dangerError}</div>}
+              </div>
+              <div className="flex gap-3 mt-5">
+                <Button variant="outline" className="flex-1" onClick={() => setShowDangerModal(false)} disabled={dangerSubmitting}>Annuler</Button>
+                <Button variant="destructive" className="flex-1" onClick={handleResetEverything} disabled={dangerSubmitting}>
+                  {dangerSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Traitement...</> : "Confirmer la réinitialisation"}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showResetModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowResetModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl bg-card border border-white/10 p-6 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white">Remettre à zéro un compteur</h3>
+                <button onClick={() => setShowResetModal(false)} className="text-gray-500 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-400 mb-4">Sélectionnez le compteur à remettre à zéro. Cette action sera enregistrée dans l'historique.</p>
+              <div className="space-y-2">
+                {counterCards.map((counter) => (
+                  <button
+                    key={counter.key}
+                    onClick={() => { setShowResetModal(false); openConfirm("reset", counter.key); }}
+                    className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg bg-gradient-to-br ${counter.color}`}>
+                        <RotateCcw className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-white font-medium">{counter.label}</p>
+                        <p className="text-xs text-gray-500">{formatCurrency(counter.value)}</p>
+                      </div>
+                    </div>
+                    <RotateCcw className="w-4 h-4 text-gray-500" />
+                  </button>
+                ))}
+                <button
+                  onClick={() => { setShowResetModal(false); openConfirm("reset", "all"); }}
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-red-500/20">
+                      <AlertTriangle className="w-4 h-4 text-red-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-red-300 font-medium">Tout remettre à zéro</p>
+                      <p className="text-xs text-gray-500">Toutes les valeurs financières</p>
+                    </div>
+                  </div>
+                  <RotateCcw className="w-4 h-4 text-red-400" />
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de confirmation */}
+      <AnimatePresence>
+        {showConfirmModal && confirmAction && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => { if (!actionLoading) setShowConfirmModal(false); }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-2xl bg-card border border-white/10 p-6 shadow-2xl"
+            >
+              <div className="text-center mb-6">
+                <div className={`w-14 h-14 rounded-full mx-auto mb-3 flex items-center justify-center ${confirmAction === "clear" ? "bg-red-500/20" : "bg-amber-500/20"}`}>
+                  {confirmAction === "clear" ? (
+                    <Trash2 className="w-7 h-7 text-red-400" />
+                  ) : confirmAction === "restore" ? (
+                    <RefreshCw className="w-7 h-7 text-blue-400" />
+                  ) : (
+                    <AlertTriangle className="w-7 h-7 text-amber-400" />
+                  )}
+                </div>
+                <h3 className="text-lg font-bold text-white">{confirmMessages[confirmAction]?.title || "Confirmation"}</h3>
+                <p className="text-sm text-gray-400 mt-2">{confirmMessages[confirmAction]?.message || "Confirmez-vous cette action ?"}</p>
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1" onClick={() => setShowConfirmModal(false)} disabled={actionLoading}>Annuler</Button>
+                <Button variant={confirmAction === "clear" ? "destructive" : "premium"} className="flex-1" onClick={() => {
+                  if (confirmAction === "reset" && confirmTarget) handleReset();
+                  else if (confirmAction === "restore" && confirmTarget) handleRestore(confirmTarget);
+                  else if (confirmAction === "clear") handleClearHistory();
+                }} disabled={actionLoading}>
+                  {actionLoading ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Traitement...</> : confirmAction === "clear" ? "Vider" : confirmAction === "restore" ? "Restaurer" : "Confirmer"}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Demandes en attente */}
       <SectionToggle show={showPending} setShow={setShowPending} title="Demandes en attente" count={pending.length}>
         {loading ? <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-20 rounded-xl bg-white/5 animate-pulse" />)}</div>
@@ -280,7 +673,6 @@ export default function AdminWithdrawalsPage() {
                   </div>
                   {isClaimable && <div className="mb-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center gap-2 text-xs text-amber-400"><MessageCircle className="w-3.5 h-3.5 shrink-0" />Réclamation possible (48h+)</div>}
                   <div className="flex flex-wrap gap-1.5">
-                    <Button size="sm" variant="default" onClick={() => openModal(w.id, "validated")}><Check className="w-3 h-3 mr-1" /> Validé</Button>
                     <Button size="sm" variant="premium" onClick={() => openModal(w.id, "paid")}><Check className="w-3 h-3 mr-1" /> Payer</Button>
                     <Button size="sm" variant="destructive" onClick={() => openModal(w.id, "rejected")}><X className="w-3 h-3 mr-1" /> Refuser</Button>
                   </div>

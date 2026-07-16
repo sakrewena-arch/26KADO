@@ -10,7 +10,15 @@ export function cn(...inputs: ClassValue[]) {
 // ============================================
 export function formatCurrency(amount: number): string {
   if (!amount && amount !== 0) return "0 FCFA"
-  return `${amount.toLocaleString()} FCFA`
+  // Format manuel pour éviter les différences serveur/client
+  const parts = Math.round(Math.abs(amount)).toString().split("").reverse();
+  const formatted: string[] = [];
+  parts.forEach((d, i) => {
+    if (i > 0 && i % 3 === 0) formatted.push(" ");
+    formatted.push(d);
+  });
+  const result = formatted.reverse().join("");
+  return amount < 0 ? `-${result} FCFA` : `${result} FCFA`;
 }
 
 // ============================================

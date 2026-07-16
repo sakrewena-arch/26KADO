@@ -126,41 +126,44 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Demande de retrait introuvable" }, { status: 404 });
   }
 
-  // Mettre à jour le statut en premier (toujours)
-  const { error: updateErr } = await supabase
+  // Debug logs: afficher payload, utilisateur et demande récupérée
+  try {
+    console.log("[api/admin/withdrawals] payload:", JSON.stringify(payload));
+    console.log("[api/admin/withdrawals] acting user:", user.id, "profile role:", profile?.role);
+    console.log("[api/admin/withdrawals] withdrawal fetched:", JSON.stringify(withdrawal));
+  } catch (e) {
+    console.error("[api/admin/withdrawals] log error", e);
+  }
+
+  // Autoriser uniquement ces statuts pour les retraits
+  const allowedWithdrawalStatuses = ["paid", "rejected"];
+  if (!allowedWithdrawalStatuses.includes(payload.status)) {
+    return NextResponse.json({ error: "Statut non autorisé pour les retraits" }, { status: 400 });
+  }
+
+  // NOTE: Admin 'paid' action marks the withdrawal as paid but does not
+  // automatically debit wallets because payments are sent manually.
+  // (Automated debits should happen via the payment provider/webhook.)
+
+  // Mettre à jour le statut et renvoyer la ligne mise à jour
+  const { data: updatedWithdrawal, error: updateErr } = await supabase
     .from("withdrawal_requests")
     .update({ status: payload.status, admin_note: payload.admin_note || null, updated_at: new Date().toISOString() })
-    .eq("id", payload.withdrawal_id);
+    .eq("id", payload.withdrawal_id)
+    .select()
+    .maybeSingle();
+
+  // Log update result for debugging
+  try {
+    console.log("[api/admin/withdrawals] updateErr:", updateErr ? JSON.stringify(updateErr) : null);
+    console.log("[api/admin/withdrawals] updatedWithdrawal:", JSON.stringify(updatedWithdrawal));
+  } catch (e) { console.error("[api/admin/withdrawals] log error", e); }
 
   if (updateErr) {
-    return NextResponse.json({ error: updateErr.message }, { status: 500 });
+    return NextResponse.json({ error: updateErr.message || "Impossible de mettre à jour la demande" }, { status: 500 });
   }
 
-  // Si "paid", débiter le wallet
-  if (payload.status === "paid") {
-    const { data: wallet } = await supabase
-      .from("wallets")
-      .select("id, balance, total_withdrawn")
-      .eq("user_id", withdrawal.user_id)
-      .single();
-
-    if (wallet && Number(wallet.balance) >= Number(withdrawal.amount)) {
-      await supabase
-        .from("wallets")
-        .update({
-          balance: Number(wallet.balance) - Number(withdrawal.amount),
-          total_withdrawn: Number(wallet.total_withdrawn) + Number(withdrawal.amount),
-        })
-        .eq("id", wallet.id);
-
-      await supabase.from("wallet_transactions").insert({
-        wallet_id: wallet.id, type: "debit", amount: Number(withdrawal.amount),
-        source: "withdrawal", description: `Retrait #${payload.withdrawal_id.slice(0, 8)}`,
-        reference_id: payload.withdrawal_id,
-      });
-    }
-    // Si pas de wallet ou solde insuffisant, on met quand même le statut à jour
-  }
-
-  return NextResponse.json({ success: true, status: payload.status });
+  // Même si updatedWithdrawal est null (p. ex. RLS empêchant la lecture),
+  // considérer l'opération comme réussie si aucune erreur n'a été retournée.
+  return NextResponse.json({ success: true, status: payload.status, withdrawal: updatedWithdrawal || null });
 }

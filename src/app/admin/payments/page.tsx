@@ -113,7 +113,7 @@ export default function AdminPaymentsPage() {
     setCreditSubmitting(true); setCreditError(null); setCreditSuccess(null);
     try {
       const res = await fetch("/api/admin/withdrawals", {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
+        method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: selectedUser.id, amount: Number(depositAmount), status: "deposit" }),
       });
       const data = await res.json();
@@ -131,7 +131,7 @@ export default function AdminPaymentsPage() {
     setCancelSubmitting(true); setCancelError(null);
     try {
       const res = await fetch("/api/admin/withdrawals", {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
+        method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: cancelTarget.user_id, amount: cancelTarget.amount, status: "cancelled" }),
       });
       const data = await res.json();

@@ -62,27 +62,10 @@ function RegisterForm() {
       setError(result.error);
       setIsLoading(false);
     } else {
-      setSuccess(true);
-      setIsLoading(false);
+      // Rediriger directement vers la page d'accueil
+      router.push("/");
     }
   };
-
-  if (success) {
-    return (
-      <Card className="p-8 text-center">
-        <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
-          <Mail className="w-8 h-8 text-green-400" />
-        </div>
-        <h1 className="text-2xl font-bold text-white">Vérifiez votre email</h1>
-        <p className="text-gray-400 mt-2">
-          Un email de confirmation vous a été envoyé. Cliquez sur le lien pour activer votre compte.
-        </p>
-        <Link href="/auth/login">
-          <Button className="mt-6">Aller à la connexion</Button>
-        </Link>
-      </Card>
-    );
-  }
 
   return (
     <Card className="p-8">

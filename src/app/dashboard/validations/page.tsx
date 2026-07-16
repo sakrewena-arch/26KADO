@@ -70,6 +70,7 @@ export default function ValidationsPage() {
 
   const handleSubmit = async (existingId?: string) => {
     if (!bookmakerId || !bookmakerUserId || !depositAmount || !depositDate) return;
+    if (!existingId && selectedFiles.length === 0) return; // Images obligatoires pour une nouvelle soumission
     setIsSubmitting(true);
     try {
       let imageUrls: string[] = [];
@@ -230,7 +231,8 @@ export default function ValidationsPage() {
               )}
             </div>
             <div className="flex gap-2">
-              <Button className="flex-1" onClick={() => handleSubmit(resubmitUpload?.id)} disabled={isSubmitting || Boolean(resubmitUpload && !comments)}>
+            <Button className="flex-1" onClick={() => handleSubmit(resubmitUpload?.id)}
+              disabled={isSubmitting || !bookmakerId || !bookmakerUserId || !depositAmount || !depositDate || (!resubmitUpload && selectedFiles.length === 0) || Boolean(resubmitUpload && !comments)}>
                 {isSubmitting ? "Envoi..." : resubmitUpload ? "Envoyer les modifications" : "Envoyer la validation"}
                 <Upload className="ml-2 w-4 h-4" />
               </Button>
