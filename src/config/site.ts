@@ -107,6 +107,7 @@ export const siteConfig = {
   ],
   navigation: [
     { title: "Accueil", href: "/" },
+    { title: "Guide", href: "/guide" },
     { title: "Bookmakers", href: "/bookmakers" },
     { title: "À propos", href: "/about" },
     { title: "FAQ", href: "/faq" },

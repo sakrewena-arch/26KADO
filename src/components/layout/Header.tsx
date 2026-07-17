@@ -31,9 +31,7 @@ export default function Header() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group">
-              <span className="text-2xl font-bold text-gradient glow-blue">
-                26KADO
-              </span>
+              <img src="/images/logo2.png" alt="26KADO" className="h-8 w-auto" />
             </Link>
 
             {/* Desktop Navigation */}
@@ -51,10 +49,22 @@ export default function Header() {
                   {item.title}
                 </Link>
               ))}
+              {/* Guide button in nav */}
+              <Link href="/guide">
+                <Button variant="premium" size="sm" className="ml-2">
+                  Guide
+                </Button>
+              </Link>
             </nav>
 
             {/* Right side */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              {/* Guide button - always visible on mobile & desktop */}
+              <Link href="/guide" className="lg:hidden">
+                <Button variant="premium" size="sm" className="text-xs px-3 py-1.5">
+                  Guide
+                </Button>
+              </Link>
               {loading ? (
                 <div className="w-20 h-9 rounded-lg bg-white/5 animate-pulse" />
               ) : user ? (

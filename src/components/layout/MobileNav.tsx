@@ -40,8 +40,8 @@ export default function MobileNav({ isOpen, onClose }: MobileNavProps) {
             className="fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-card border-l border-white/10 z-50 p-6"
           >
             <div className="flex items-center justify-between mb-8">
-              <Link href="/" onClick={onClose} className="text-xl font-bold text-gradient">
-                26KADO
+              <Link href="/" onClick={onClose} className="flex items-center">
+                <img src="/images/logo2.png" alt="26KADO" className="h-7 w-auto" />
               </Link>
               <button
                 onClick={onClose}
