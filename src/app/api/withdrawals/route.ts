@@ -37,8 +37,36 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  // Créer la demande de retrait en statut "pending" (sans débiter le wallet)
-  // Le débit sera effectué par l'admin quand il marquera "paid"
+  // Récupérer ou créer le wallet
+  let { data: wallet, error: walletError } = await supabase
+    .from("wallets")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
+
+  if (walletError || !wallet) {
+    const { data: newWallet, error: createError } = await supabase
+      .from("wallets")
+      .insert({
+        user_id: user.id,
+        balance: 0,
+        total_earned: 0,
+        total_withdrawn: 0,
+      })
+      .select("*")
+      .single();
+
+    if (createError || !newWallet) {
+      return NextResponse.json({ error: "Impossible de créer le portefeuille" }, { status: 500 });
+    }
+    wallet = newWallet;
+  }
+
+  if (Number(wallet.balance) < payload.amount) {
+    return NextResponse.json({ error: "Solde insuffisant" }, { status: 400 });
+  }
+
+  // Créer la demande de retrait
   const { data: withdrawal, error: withdrawalError } = await supabase
     .from("withdrawal_requests")
     .insert({
@@ -57,9 +85,32 @@ export async function POST(request: NextRequest) {
     }, { status: 500 });
   }
 
+  // Débiter immédiatement le wallet (le montant est réservé)
+  const { error: walletUpdateError } = await supabase
+    .from("wallets")
+    .update({
+      balance: Number(wallet.balance) - payload.amount,
+      total_withdrawn: Number(wallet.total_withdrawn) + payload.amount,
+    })
+    .eq("id", wallet.id);
+
+  if (walletUpdateError) {
+    return NextResponse.json({ error: "Erreur lors du débit du wallet" }, { status: 500 });
+  }
+
+  // Créer une transaction de débit
+  await supabase.from("wallet_transactions").insert({
+    wallet_id: wallet.id,
+    type: "debit",
+    amount: payload.amount,
+    source: "withdrawal",
+    description: `Demande de retrait #${withdrawal.id.slice(0, 8)} via ${payload.method}`,
+    reference_id: withdrawal.id,
+  });
+
   return NextResponse.json({
     success: true,
     withdrawal,
-    message: `Demande de retrait créée. En attente de traitement par l'administrateur.`,
+    message: `Demande de retrait créée. Votre solde a été mis à jour.`,
   });
 }

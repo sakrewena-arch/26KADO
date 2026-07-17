@@ -44,6 +44,18 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
+  // Récupérer la commission pour obtenir le montant et l'utilisateur
+  const { data: commission, error: fetchError } = await supabase
+    .from("commissions")
+    .select("user_id, amount, status, bookmaker_id")
+    .eq("id", payload.commission_id)
+    .single();
+
+  if (fetchError || !commission) {
+    return NextResponse.json({ error: "Commission introuvable" }, { status: 404 });
+  }
+
+  // Mettre à jour le statut
   const { error } = await supabase
     .from("commissions")
     .update({ status: payload.status, updated_at: new Date().toISOString() })
@@ -53,5 +65,43 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Si le statut passe à "paid" uniquement, créditer le wallet
+  // "validated" ne fait que confirmer la validation, ne crédite pas
+  if (payload.status === "paid" && commission.status !== "paid") {
+    const { data: wallet } = await supabase
+      .from("wallets")
+      .select("id, balance, total_earned")
+      .eq("user_id", commission.user_id)
+      .single();
+
+    if (wallet) {
+      const amount = Number(commission.amount);
+      await supabase
+        .from("wallets")
+        .update({
+          balance: Number(wallet.balance) + amount,
+          total_earned: Number(wallet.total_earned) + amount,
+        })
+        .eq("id", wallet.id);
+
+      await supabase.from("wallet_transactions").insert({
+        wallet_id: wallet.id,
+        type: "credit",
+        amount: amount,
+        source: "commission",
+        description: `Commission validée pour la validation`,
+        reference_id: payload.commission_id,
+      });
+
+      await supabase.from("notifications").insert({
+        user_id: commission.user_id,
+        type: "commission",
+        title: "Commission créditée",
+        message: `Votre commission de ${amount.toLocaleString()} FCFA a été créditée sur votre wallet.`,
+      });
+    }
+  }
+
+  // Si le statut passe à "rejected", aucune action wallet
   return NextResponse.json({ success: true, status: payload.status });
 }
