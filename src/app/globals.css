@@ -144,16 +144,22 @@ html {
 .header-logo {
   display: block !important;
   width: auto !important;
-  height: 24px !important;
   max-width: 120px !important;
   max-height: 40px !important;
   object-fit: contain !important;
   flex-shrink: 1 !important;
 }
 
+.mobile-nav-logo {
+  display: block !important;
+  width: auto !important;
+  max-width: 168px !important;
+  max-height: 120px !important;
+  object-fit: contain !important;
+}
+
 @media (min-width: 640px) {
   .header-logo {
-    height: 32px !important;
     max-width: 160px !important;
     max-height: 48px !important;
   }
@@ -161,7 +167,6 @@ html {
 
 @media (max-width: 360px) {
   .header-logo {
-    height: 20px !important;
     max-width: 100px !important;
   }
 }

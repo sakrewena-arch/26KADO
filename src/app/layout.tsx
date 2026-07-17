@@ -64,12 +64,7 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/images/logo.png", type: "image/png", sizes: "192x192" },
-      { url: "/apple-touch-icon.png", type: "image/png", sizes: "180x180" },
-      { url: "/favicon-192.png", type: "image/png", sizes: "192x192" },
-    ],
+    icon: "/images/logo.png",
     shortcut: "/images/logo.png",
     apple: "/images/logo.png",
   },
@@ -102,7 +97,6 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            {/* PixelSnow background - Canvas 2D, no WebGL */}
             <PixelSnow
               color="#ffffff"
               flakeSize={0.01}
