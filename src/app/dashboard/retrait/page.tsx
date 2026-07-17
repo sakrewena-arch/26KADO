@@ -11,7 +11,8 @@ import { useWallet } from "@/hooks/useWallet";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
-import { Wallet, ArrowUpFromLine, Smartphone, Building2, Loader2, Check, X, Clock, Calendar, MessageCircle } from "lucide-react";
+import { Wallet, ArrowUpFromLine, Smartphone, Building2, Check, X, Clock, Calendar, MessageCircle } from "lucide-react";
+import LottieLoader from "@/components/ui/loading-animation";
 import type { WithdrawalRequest } from "@/types";
 import WithdrawalNotice from "@/components/WithdrawalNotice";
 import { motion, AnimatePresence } from "framer-motion";
@@ -301,7 +302,7 @@ export default function RetraitPage() {
 
           {geoLoading ? (
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <LottieLoader size={16} />
               Détection de votre pays...
             </div>
           ) : countryInfo ? (
@@ -387,7 +388,7 @@ export default function RetraitPage() {
 
             <Button className="w-full" onClick={handleWithdrawal} disabled={isSubmitting || !amount || !accountInfo} size="lg">
               {isSubmitting ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Traitement...</>
+                <><LottieLoader size={20} /> Traitement...</>
               ) : (
                 <><ArrowUpFromLine className="mr-2 w-4 h-4" /> Retirer</>
               )}

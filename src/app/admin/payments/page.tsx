@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { CreditCard, Search, Loader2, Check, X, User, ArrowUpFromLine, AlertTriangle, Undo2 } from "lucide-react";
+import { CreditCard, Search, Check, X, User, ArrowUpFromLine, AlertTriangle, Undo2 } from "lucide-react";
+import LottieLoader from "@/components/ui/loading-animation";
 import type { Profile } from "@/types";
 import { PeriodFilter, filterByPeriod, type Period } from "@/components/ui/period-filter";
 
@@ -172,7 +173,7 @@ export default function AdminPaymentsPage() {
             <div className="relative">
               <Search className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
               <Input placeholder="Email ou nom..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setSelectedUser(null); }} className="pl-10" />
-              {searching && <Loader2 className="absolute right-3 top-3 w-4 h-4 animate-spin text-gray-500" />}
+              {searching && <LottieLoader size={16} />}
             </div>
             {searchResults.length > 0 && !selectedUser && (
               <div className="border border-white/10 rounded-xl overflow-hidden">
@@ -266,7 +267,7 @@ export default function AdminPaymentsPage() {
                   <div className="flex gap-3">
                     <Button variant="outline" className="flex-1" onClick={() => setShowCreditModal(false)} disabled={creditSubmitting}>Annuler</Button>
                     <Button variant="premium" className="flex-1" onClick={handleCredit} disabled={creditSubmitting}>
-                      {creditSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Traitement...</> : "Confirmer le crédit"}
+                      {creditSubmitting ? <><LottieLoader size={20} /> Traitement...</> : "Confirmer le crédit"}
                     </Button>
                   </div>
                 </>
@@ -303,7 +304,7 @@ export default function AdminPaymentsPage() {
                   <div className="flex gap-3">
                     <Button variant="outline" className="flex-1" onClick={() => setShowCancelModal(false)} disabled={cancelSubmitting}>Annuler</Button>
                     <Button variant="destructive" className="flex-1" onClick={handleCancel} disabled={cancelSubmitting}>
-                      {cancelSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Traitement...</> : "Confirmer l'annulation"}
+                      {cancelSubmitting ? <><LottieLoader size={20} /> Traitement...</> : "Confirmer l'annulation"}
                     </Button>
                   </div>
                 </>

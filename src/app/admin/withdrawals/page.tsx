@@ -11,8 +11,9 @@ import { getAllWithdrawals, getAdminStats } from "@/lib/supabase/queries";
 import { formatCurrency, formatDate, getStatusLabel } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, ArrowUpFromLine, Loader2, Search, ChevronDown, ChevronUp, User, MessageCircle, Clock, AlertTriangle, RotateCcw, History, Trash2, RefreshCw } from "lucide-react";
+import { Check, X, ArrowUpFromLine, Search, ChevronDown, ChevronUp, User, MessageCircle, Clock, AlertTriangle, RotateCcw, History, Trash2, RefreshCw } from "lucide-react";
 import type { WithdrawalRequest, Profile } from "@/types";
+import LottieLoader from "@/components/ui/loading-animation";
 import { PeriodFilter, filterByPeriod, type Period } from "@/components/ui/period-filter";
 
 interface ResetLog {
@@ -390,7 +391,7 @@ export default function AdminWithdrawalsPage() {
                   <div className="flex gap-3">
                     <Button variant="outline" className="flex-1" onClick={() => setShowModal(false)} disabled={modalSubmitting}>Annuler</Button>
                     <Button variant={modalAction === "rejected" ? "destructive" : "premium"} className="flex-1" onClick={executeAction} disabled={modalSubmitting}>
-                      {modalSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Traitement...</> : "Confirmer"}
+                      {modalSubmitting ? <><LottieLoader size={20} /> Traitement...</> : "Confirmer"}
                     </Button>
                   </div>
                 </>
@@ -530,7 +531,7 @@ export default function AdminWithdrawalsPage() {
               <div className="flex gap-3 mt-5">
                 <Button variant="outline" className="flex-1" onClick={() => setShowDangerModal(false)} disabled={dangerSubmitting}>Annuler</Button>
                 <Button variant="destructive" className="flex-1" onClick={handleResetEverything} disabled={dangerSubmitting}>
-                  {dangerSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Traitement...</> : "Confirmer la réinitialisation"}
+                  {dangerSubmitting ? <><LottieLoader size={20} /> Traitement...</> : "Confirmer la réinitialisation"}
                 </Button>
               </div>
             </motion.div>
@@ -743,7 +744,7 @@ export default function AdminWithdrawalsPage() {
             <div className="relative">
               <Search className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
               <Input placeholder="Email..." value={depositSearch} onChange={(e) => { setDepositSearch(e.target.value); setDepositUser(null); }} className="pl-10" />
-              {depositSearching && <Loader2 className="absolute right-3 top-3 w-4 h-4 animate-spin text-gray-500" />}
+              {depositSearching && <LottieLoader size={16} />}
             </div>
             {depositResults.length > 0 && !depositUser && (
               <div className="border border-white/10 rounded-xl overflow-hidden">
@@ -770,7 +771,7 @@ export default function AdminWithdrawalsPage() {
           </div>
           <div className="space-y-2 flex items-end">
             <Button className="w-full" onClick={handleDeposit} disabled={depositSubmitting || !depositAmount || !depositUser}>
-              {depositSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Traitement...</> : <><ArrowUpFromLine className="w-4 h-4 mr-2" /> Créditer</>}
+              {depositSubmitting ? <><LottieLoader size={20} /> Traitement...</> : <><ArrowUpFromLine className="w-4 h-4 mr-2" /> Créditer</>}
             </Button>
           </div>
         </div>
