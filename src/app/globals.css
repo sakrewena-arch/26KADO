@@ -140,6 +140,32 @@ html {
   img { max-width: 100% !important; height: auto !important; }
 }
 
+/* Header logo specific rules to prevent overflow */
+.header-logo {
+  display: block !important;
+  width: auto !important;
+  height: 24px !important;
+  max-width: 120px !important;
+  max-height: 40px !important;
+  object-fit: contain !important;
+  flex-shrink: 1 !important;
+}
+
+@media (min-width: 640px) {
+  .header-logo {
+    height: 32px !important;
+    max-width: 160px !important;
+    max-height: 48px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .header-logo {
+    height: 20px !important;
+    max-width: 100px !important;
+  }
+}
+
 @media (max-width: 360px) {
   .xs-hide { display: none !important; }
   .xs-text-xs { font-size: 0.75rem !important; }
