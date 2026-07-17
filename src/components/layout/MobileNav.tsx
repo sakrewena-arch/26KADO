@@ -41,7 +41,7 @@ export default function MobileNav({ isOpen, onClose }: MobileNavProps) {
           >
             <div className="flex items-center justify-between mb-8">
               <Link href="/" onClick={onClose} className="flex items-center">
-                <img src="/images/logo2.png" alt="26KADO" className="h-7 w-auto" />
+                <img src="/images/logo.png" alt="26KADO" className="h-7 w-auto" />
               </Link>
               <button
                 onClick={onClose}
