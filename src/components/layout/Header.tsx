@@ -30,8 +30,8 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 group shrink-0">
-              <img src="/images/logo.png" alt="26KADO" className="h-7 sm:h-8 w-auto max-w-[120px] sm:max-w-[160px] object-contain" />
+            <Link href="/" className="flex items-center gap-2 group shrink-0 max-w-[40%] sm:max-w-none">
+              <img src="/images/logo.png" alt="26KADO" className="h-6 sm:h-8 w-auto max-w-[100px] sm:max-w-[160px] object-contain" />
             </Link>
 
             {/* Desktop Navigation */}
