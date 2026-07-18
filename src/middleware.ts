@@ -94,22 +94,13 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Dashboard routes protégées
-  if (path.startsWith("/dashboard")) {
-    if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/auth/login";
-      return NextResponse.redirect(url);
-    }
-    return supabaseResponse;
-  }
-
+  // Dashboard routes - pas de vérification côté serveur
+  // La protection est gérée côté client par DashboardLayout
   return supabaseResponse;
 }
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
     "/admin/:path*",
     "/admin/login",
   ],
