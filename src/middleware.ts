@@ -44,8 +44,9 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Récupérer l'utilisateur. Si pas de session, pas d'erreur, on continue.
-  const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+  // Récupérer la session (plus fiable que getUser côté serveur)
+  const { data: { session } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+  const user = session?.user ?? null;
 
   // Fonction utilitaire pour récupérer le profil sans erreur
   const getProfile = async (userId: string) => {
