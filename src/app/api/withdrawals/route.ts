@@ -27,15 +27,17 @@ export async function POST(request: NextRequest) {
     {
       cookies: {
         getAll() { return request.cookies.getAll(); },
-        setAll() { /* no-op */ },
+        setAll() { /* no-op - la session est déjà dans les cookies */ },
       },
     }
   );
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
+  // Utiliser getSession() au lieu de getUser() pour éviter les problèmes de refresh token
+  const { data: { session }, error: authError } = await supabase.auth.getSession();
+  if (authError || !session?.user) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
+  const user = session.user;
 
   // Récupérer ou créer le wallet
   let { data: wallet, error: walletError } = await supabase
