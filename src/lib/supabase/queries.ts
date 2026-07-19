@@ -339,12 +339,30 @@ export async function getAllUsers() {
 }
 
 export async function getAllCommissions() {
+  // Charger les commissions sans jointure profile pour éviter l'ambiguïté "referrer_id"
   const { data, error } = await supabase
     .from("commissions")
-    .select("*, user:profiles!commissions_user_id_fkey(id, full_name, email, referral_code, total_commission, total_referrals, total_validations, total_clicks, is_active, role, created_at, updated_at, avatar_url, phone, level_id, badge_id, referred_by), bookmaker:bookmakers(*)")
+    .select("*, bookmaker:bookmakers(*)")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return data as (Commission & { user_referrer?: Profile | null })[];
+
+  // Charger les profils séparément
+  const commissions = data as Commission[];
+  const userIds = [...new Set(commissions.map(c => c.user_id))];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("*")
+    .in("id", userIds);
+
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+
+  // Attacher les profils aux commissions
+  const enriched = commissions.map(c => ({
+    ...c,
+    user: profileMap.get(c.user_id) || null,
+  }));
+
+  return enriched as (Commission & { user_referrer?: Profile | null })[];
 }
 
 export async function getAllUploads() {
