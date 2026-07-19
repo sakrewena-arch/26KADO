@@ -13,9 +13,10 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Statut invalide" }, { status: 400 });
   }
 
+  // Utiliser le service_role key pour éviter les ambiguïtés de jointure RLS
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       cookies: {
         getAll() {
@@ -28,13 +29,25 @@ export async function PATCH(request: NextRequest) {
     }
   );
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  // Vérifier l'auth avec le client anon d'abord
+  const anonSupabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll(); },
+        setAll() { /* no-op */ },
+      },
+    }
+  );
+
+  const { data: { user }, error: authError } = await anonSupabase.auth.getUser();
 
   if (authError || !user) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile, error: profileError } = await anonSupabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
@@ -44,7 +57,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  // Récupérer la commission pour obtenir le montant et l'utilisateur
+  // Récupérer la commission avec le client service_role (évite les ambiguïtés RLS)
   const { data: commission, error: fetchError } = await supabase
     .from("commissions")
     .select("user_id, amount, status, bookmaker_id")
@@ -55,7 +68,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Commission introuvable" }, { status: 404 });
   }
 
-  // Mettre à jour le statut
+  // Mettre à jour le statut avec le client service_role
   const { error } = await supabase
     .from("commissions")
     .update({ status: payload.status, updated_at: new Date().toISOString() })
