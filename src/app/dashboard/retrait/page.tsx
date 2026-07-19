@@ -80,8 +80,9 @@ export default function RetraitPage() {
   const { wallet, createWithdrawal, loading } = useWallet();
   const { user, profile } = useAuth();
   const supabase = createClient();
-  // Utiliser le wallet si disponible, sinon le total_commission du profil
-  const balance = wallet?.balance ?? profile?.total_commission ?? 0;
+  // Utiliser UNIQUEMENT le wallet.balance pour le solde réel
+  // Le profile.total_commission n'est plus utilisé car il n'est plus incrémenté à la validation
+  const balance = wallet?.balance ?? 0;
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
   const [withdrawalsLoading, setWithdrawalsLoading] = useState(true);
   const [countryInfo, setCountryInfo] = useState<CountryInfo | null>(null);

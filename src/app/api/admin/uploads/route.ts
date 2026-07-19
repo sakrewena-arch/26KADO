@@ -95,10 +95,12 @@ export async function PATCH(request: NextRequest) {
       const userId = upload.user_id;
       const amount = payload.commission_amount;
 
-      // 1. Mettre à jour les stats du profil
+      // 1. Mettre à jour uniquement total_validations (statistique)
+      // NE PAS incrémenter total_commission ici - le wallet sera crédité
+      // uniquement quand l'admin clique "Payer" dans la page Commissions
       const { data: profile } = await supabase
         .from("profiles")
-        .select("total_commission, total_validations")
+        .select("total_validations")
         .eq("id", userId)
         .single();
 
@@ -106,7 +108,6 @@ export async function PATCH(request: NextRequest) {
         await supabase
           .from("profiles")
           .update({
-            total_commission: Number(profile.total_commission) + amount,
             total_validations: Number(profile.total_validations) + 1,
           })
           .eq("id", userId);

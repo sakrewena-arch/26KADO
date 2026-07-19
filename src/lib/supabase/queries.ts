@@ -341,7 +341,7 @@ export async function getAllUsers() {
 export async function getAllCommissions() {
   const { data, error } = await supabase
     .from("commissions")
-    .select("*, user:profiles!commissions_user_id_fkey(*), bookmaker:bookmakers(*)")
+    .select("*, user:profiles!commissions_user_id_fkey(id, full_name, email, referral_code, total_commission, total_referrals, total_validations, total_clicks, is_active, role, created_at, updated_at, avatar_url, phone, level_id, badge_id, referred_by), bookmaker:bookmakers(*)")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as (Commission & { user_referrer?: Profile | null })[];
