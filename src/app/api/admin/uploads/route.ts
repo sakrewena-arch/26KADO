@@ -82,7 +82,8 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  // Si validation, créditer le wallet directement + créer la commission
+  // Si validation, créer UNIQUEMENT la commission en "pending" (pas de crédit wallet)
+  // Le crédit wallet se fera uniquement depuis la page Commissions (statut "paid")
   if (payload.status === "validated" && payload.commission_amount) {
     const { data: upload } = await supabase
       .from("uploads")
@@ -94,62 +95,49 @@ export async function PATCH(request: NextRequest) {
       const userId = upload.user_id;
       const amount = payload.commission_amount;
 
-      // 1. Créditer le wallet
-      const { data: wallet } = await supabase
-        .from("wallets")
-        .select("id, balance, total_earned")
-        .eq("user_id", userId)
-        .single();
-
-      if (wallet) {
-        await supabase
-          .from("wallets")
-          .update({
-            balance: Number(wallet.balance) + amount,
-            total_earned: Number(wallet.total_earned) + amount,
-          })
-          .eq("id", wallet.id);
-
-        // 2. Ajouter la transaction
-        await supabase
-          .from("wallet_transactions")
-          .insert({
-            wallet_id: wallet.id,
-            type: "credit",
-            amount: amount,
-            source: "commission",
-            description: `Commission pour validation d'inscription #${payload.upload_id.slice(0, 8)}`,
-            reference_id: payload.upload_id,
-          });
-      }
-
-      // 3. Mettre à jour le total_commission du profil
+      // 1. Mettre à jour les stats du profil
       const { data: profile } = await supabase
         .from("profiles")
-        .select("total_commission")
+        .select("total_commission, total_validations")
         .eq("id", userId)
         .single();
 
       if (profile) {
         await supabase
           .from("profiles")
-          .update({ total_commission: Number(profile.total_commission) + amount })
+          .update({
+            total_commission: Number(profile.total_commission) + amount,
+            total_validations: Number(profile.total_validations) + 1,
+          })
           .eq("id", userId);
       }
 
-      // 4. Créer la commission en base (déjà validée)
+      // 2. S'assurer que le wallet existe (le créer si nécessaire)
+      const { data: existingWallet } = await supabase
+        .from("wallets")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
+
+      if (!existingWallet) {
+        await supabase
+          .from("wallets")
+          .insert({ user_id: userId, balance: 0, total_earned: 0, total_withdrawn: 0 });
+      }
+
+      // 3. Créer la commission en "pending" (en attente de paiement)
       await supabase
         .from("commissions")
         .insert({
           user_id: userId,
           bookmaker_id: upload.bookmaker_id,
           amount: amount,
-          status: "validated",
+          status: "pending",
           description: `Commission pour validation d'inscription #${payload.upload_id.slice(0, 8)}`,
           validation_id: payload.upload_id,
         });
 
-      // 5. Commission de parrainage (10%)
+      // 3. Commission de parrainage (10%) - aussi en "pending"
       const { data: referral } = await supabase
         .from("referrals")
         .select("referrer_id")
@@ -158,65 +146,26 @@ export async function PATCH(request: NextRequest) {
 
       if (referral) {
         const referralAmount = amount * 0.10;
-        const { data: refWallet } = await supabase
-          .from("wallets")
-          .select("id, balance, total_earned")
-          .eq("user_id", referral.referrer_id)
-          .single();
-
-        if (refWallet) {
-          await supabase
-            .from("wallets")
-            .update({
-              balance: Number(refWallet.balance) + referralAmount,
-              total_earned: Number(refWallet.total_earned) + referralAmount,
-            })
-            .eq("id", refWallet.id);
-
-          await supabase
-            .from("wallet_transactions")
-            .insert({
-              wallet_id: refWallet.id,
-              type: "credit",
-              amount: referralAmount,
-              source: "referral",
-              description: `Commission de parrainage (10%) pour validation #${payload.upload_id.slice(0, 8)}`,
-              reference_id: payload.upload_id,
-            });
-
-          await supabase
-            .from("commissions")
-            .insert({
-              user_id: referral.referrer_id,
-              bookmaker_id: upload.bookmaker_id,
-              amount: referralAmount,
-              status: "validated",
-              referral_id: null,
-              description: "Commission de parrainage (10%)",
-            });
-
-          // Notification au parrain
-          await supabase
-            .from("notifications")
-            .insert({
-              user_id: referral.referrer_id,
-              type: "referral",
-              title: "Commission de parrainage !",
-              message: `Vous avez reçu ${referralAmount} FCFA de commission de parrainage.`,
-              data: { amount: referralAmount },
-            });
-        }
+        await supabase
+          .from("commissions")
+          .insert({
+            user_id: referral.referrer_id,
+            bookmaker_id: upload.bookmaker_id,
+            amount: referralAmount,
+            status: "pending",
+            description: "Commission de parrainage (10%)",
+          });
       }
 
-      // 6. Notification à l'utilisateur
+      // 4. Notification à l'utilisateur (prévenir que la validation est acceptée)
       await supabase
         .from("notifications")
         .insert({
           user_id: userId,
           type: "commission",
-          title: "Commission validée !",
-          message: `Votre commission de ${amount} FCFA a été créditée.`,
-          data: { amount, upload_id: payload.upload_id },
+          title: "Validation acceptée !",
+          message: `Votre inscription a été validée. Une commission de ${amount} FCFA est en attente de paiement.`,
+          data: { amount, upload_id: payload.upload_id, status: "pending" },
         });
     }
   }

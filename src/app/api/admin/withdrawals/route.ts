@@ -141,9 +141,37 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Statut non autorisé pour les retraits" }, { status: 400 });
   }
 
-  // NOTE: Admin 'paid' action marks the withdrawal as paid but does not
-  // automatically debit wallets because payments are sent manually.
-  // (Automated debits should happen via the payment provider/webhook.)
+  // Si le statut passe à "paid", débiter le wallet (le montant avait été réservé au moment de la demande)
+  if (payload.status === "paid") {
+    const { data: wallet } = await supabase
+      .from("wallets")
+      .select("id, balance, total_withdrawn")
+      .eq("user_id", withdrawal.user_id)
+      .single();
+
+    if (wallet) {
+      const amount = Number(withdrawal.amount);
+      // S'assurer que le solde est suffisant (normalement oui car débité à la création)
+      if (Number(wallet.balance) >= amount) {
+        await supabase
+          .from("wallets")
+          .update({
+            balance: Number(wallet.balance) - amount,
+            total_withdrawn: Number(wallet.total_withdrawn) + amount,
+          })
+          .eq("id", wallet.id);
+
+        await supabase.from("wallet_transactions").insert({
+          wallet_id: wallet.id,
+          type: "debit",
+          amount: amount,
+          source: "withdrawal",
+          description: `Retrait payé #${payload.withdrawal_id.slice(0, 8)}`,
+          reference_id: payload.withdrawal_id,
+        });
+      }
+    }
+  }
 
   // Mettre à jour le statut et renvoyer la ligne mise à jour
   const { data: updatedWithdrawal, error: updateErr } = await supabase

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { getAllUploads } from "@/lib/supabase/queries";
 import { formatCurrency, formatDate, getStatusLabel } from "@/lib/utils";
-import { Check, X, Info, Eye, ExternalLink, FileImage, MessageSquare, User, Calendar, DollarSign, Hash, XCircle, CheckSquare, Square, Trash, Trash2 } from "lucide-react";
+import { Check, X, Info, Eye, ExternalLink, FileImage, MessageSquare, User, Calendar, DollarSign, Hash, XCircle, CheckSquare, Square, Trash, Trash2, Loader2 } from "lucide-react";
 import type { Upload } from "@/types";
 
 export default function AdminValidationsPage() {
@@ -21,6 +21,8 @@ export default function AdminValidationsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [validatingId, setValidatingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
 
   const loadUploads = async () => {
     const data = await getAllUploads();
@@ -34,73 +36,94 @@ export default function AdminValidationsPage() {
 
   const handleValidate = async (upload: Upload) => {
     if (!commissionAmount) return;
-    await fetch("/api/admin/uploads", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        upload_id: upload.id,
-        status: "validated",
-        commission_amount: Number(commissionAmount),
-        admin_note: "Validé par l'administrateur",
-      }),
-    });
-    setCommissionAmount("");
-    setSelectedUpload(null);
-    await loadUploads();
+    setValidatingId(upload.id);
+    try {
+      await fetch("/api/admin/uploads", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          upload_id: upload.id,
+          status: "validated",
+          commission_amount: Number(commissionAmount),
+          admin_note: "Validé par l'administrateur",
+        }),
+      });
+      setCommissionAmount("");
+      setSelectedUpload(null);
+      await loadUploads();
+    } finally {
+      setValidatingId(null);
+    }
   };
 
   const handleReject = async (upload: Upload) => {
-    await fetch("/api/admin/uploads", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        upload_id: upload.id,
-        status: "rejected",
-        admin_note: "Refusé",
-      }),
-    });
-    await loadUploads();
-    setDetailUpload(null);
+    setRejectingId(upload.id);
+    try {
+      await fetch("/api/admin/uploads", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          upload_id: upload.id,
+          status: "rejected",
+          admin_note: "Refusé",
+        }),
+      });
+      await loadUploads();
+      setDetailUpload(null);
+    } finally {
+      setRejectingId(null);
+    }
   };
 
   const handleInfoRequest = async (upload: Upload) => {
-    await fetch("/api/admin/uploads", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        upload_id: upload.id,
-        status: "info_requested",
-        admin_note: infoNote || "Informations supplémentaires requises",
-      }),
-    });
-    setInfoNote("");
-    await loadUploads();
-    setDetailUpload(null);
+    setActionLoading("info-" + upload.id);
+    try {
+      await fetch("/api/admin/uploads", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          upload_id: upload.id,
+          status: "info_requested",
+          admin_note: infoNote || "Informations supplémentaires requises",
+        }),
+      });
+      setInfoNote("");
+      await loadUploads();
+      setDetailUpload(null);
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  // Suppression "pour moi" (soft delete : on cache juste de la liste admin)
+  // Suppression "pour moi" (soft delete)
   const handleSoftDelete = async (id: string) => {
     setActionLoading(id);
-    await fetch("/api/admin/uploads", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        upload_id: id,
-        status: "archived",
-        admin_note: "Archivé par l'administrateur",
-      }),
-    });
-    await loadUploads();
-    setActionLoading(null);
+    try {
+      await fetch("/api/admin/uploads", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          upload_id: id,
+          status: "archived",
+          admin_note: "Archivé par l'administrateur",
+        }),
+      });
+      await loadUploads();
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   // Suppression définitive (hard delete)
   const handleHardDelete = async (id: string) => {
     if (!confirm("Supprimer définitivement cette validation ? Cette action est irréversible.")) return;
     setActionLoading(id);
-    await fetch(`/api/admin/uploads?id=${id}`, { method: "DELETE" });
-    await loadUploads();
-    setActionLoading(null);
+    try {
+      await fetch(`/api/admin/uploads?id=${id}`, { method: "DELETE" });
+      await loadUploads();
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   // Actions groupées
@@ -127,34 +150,40 @@ export default function AdminValidationsPage() {
     if (selectedIds.size === 0) return;
     if (!confirm(`Archiver ${selectedIds.size} validation(s) ? Elles seront masquées de la liste.`)) return;
     setActionLoading("bulk");
-    await Promise.all(
-      Array.from(selectedIds).map(id =>
-        fetch("/api/admin/uploads", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ upload_id: id, status: "archived", admin_note: "Archivé" }),
-        })
-      )
-    );
-    setSelectedIds(new Set());
-    setSelectAll(false);
-    await loadUploads();
-    setActionLoading(null);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map(id =>
+          fetch("/api/admin/uploads", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ upload_id: id, status: "archived", admin_note: "Archivé" }),
+          })
+        )
+      );
+      setSelectedIds(new Set());
+      setSelectAll(false);
+      await loadUploads();
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleBulkHardDelete = async () => {
     if (selectedIds.size === 0) return;
     if (!confirm(`Supprimer définitivement ${selectedIds.size} validation(s) ? Action irréversible.`)) return;
     setActionLoading("bulk");
-    await Promise.all(
-      Array.from(selectedIds).map(id =>
-        fetch(`/api/admin/uploads?id=${id}`, { method: "DELETE" })
-      )
-    );
-    setSelectedIds(new Set());
-    setSelectAll(false);
-    await loadUploads();
-    setActionLoading(null);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map(id =>
+          fetch(`/api/admin/uploads?id=${id}`, { method: "DELETE" })
+        )
+      );
+      setSelectedIds(new Set());
+      setSelectAll(false);
+      await loadUploads();
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   // Filtrer les archivés de la liste principale
@@ -163,17 +192,21 @@ export default function AdminValidationsPage() {
 
   return (
     <AdminLayout title="Validations">
-      {/* Barre d'actions groupées */}
+      {/* Barre d'actions groupées - responsive */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 flex items-center gap-3 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-          <span className="text-sm text-blue-400 font-medium">{selectedIds.size} sélectionné(s)</span>
-          <div className="flex gap-2 ml-auto">
-            <Button size="sm" variant="outline" onClick={handleBulkSoftDelete} disabled={actionLoading === "bulk"}>
-              <Trash2 className="w-3 h-3 mr-1" /> Archiver (pour moi)
-            </Button>
-            <Button size="sm" variant="destructive" onClick={handleBulkHardDelete} disabled={actionLoading === "bulk"}>
-              <Trash className="w-3 h-3 mr-1" /> Supprimer définitivement
-            </Button>
+        <div className="mb-4 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <span className="text-sm text-blue-400 font-medium whitespace-nowrap">{selectedIds.size} sélectionné(s)</span>
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:ml-auto">
+              <Button size="sm" variant="outline" onClick={handleBulkSoftDelete} disabled={actionLoading === "bulk"} className="flex-1 sm:flex-none text-xs sm:text-sm">
+                {actionLoading === "bulk" ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Trash2 className="w-3 h-3 mr-1" />}
+                Archiver
+              </Button>
+              <Button size="sm" variant="destructive" onClick={handleBulkHardDelete} disabled={actionLoading === "bulk"} className="flex-1 sm:flex-none text-xs sm:text-sm">
+                {actionLoading === "bulk" ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Trash className="w-3 h-3 mr-1" />}
+                Supprimer
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -213,8 +246,18 @@ export default function AdminValidationsPage() {
                     <Button size="sm" variant="default" onClick={() => { setSelectedUpload(upload); setCommissionAmount(""); }}>
                       <Check className="w-4 h-4 mr-1" /> Valider
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleReject(upload)}>
-                      <X className="w-4 h-4 mr-1" /> Refuser
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleReject(upload)}
+                      disabled={rejectingId === upload.id}
+                    >
+                      {rejectingId === upload.id ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <X className="w-4 h-4 mr-1" />
+                      )}
+                      Refuser
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => setDetailUpload(upload)}>
                       <Eye className="w-4 h-4 mr-1" /> Détails
@@ -230,8 +273,16 @@ export default function AdminValidationsPage() {
                           value={commissionAmount}
                           onChange={(e) => setCommissionAmount(e.target.value)}
                         />
-                        <Button size="sm" onClick={() => handleValidate(upload)} disabled={!commissionAmount}>
-                          Confirmer
+                        <Button
+                          size="sm"
+                          onClick={() => handleValidate(upload)}
+                          disabled={!commissionAmount || validatingId === upload.id}
+                        >
+                          {validatingId === upload.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            "Confirmer"
+                          )}
                         </Button>
                       </div>
                     </div>
@@ -278,7 +329,11 @@ export default function AdminValidationsPage() {
                     title="Archiver (pour moi)"
                     disabled={actionLoading === upload.id}
                   >
-                    <Trash2 className="w-3 h-3" />
+                    {actionLoading === upload.id ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3 h-3" />
+                    )}
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleHardDelete(upload.id); }}
@@ -286,7 +341,11 @@ export default function AdminValidationsPage() {
                     title="Supprimer définitivement"
                     disabled={actionLoading === upload.id}
                   >
-                    <Trash className="w-3 h-3" />
+                    {actionLoading === upload.id ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Trash className="w-3 h-3" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -393,8 +452,18 @@ export default function AdminValidationsPage() {
                   <Button size="sm" variant="default" onClick={() => { setDetailUpload(null); setSelectedUpload(detailUpload); setCommissionAmount(""); }}>
                     <Check className="w-4 h-4 mr-1" /> Valider
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleReject(detailUpload)}>
-                    <X className="w-4 h-4 mr-1" /> Refuser
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleReject(detailUpload)}
+                    disabled={rejectingId === detailUpload.id}
+                  >
+                    {rejectingId === detailUpload.id ? (
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    ) : (
+                      <X className="w-4 h-4 mr-1" />
+                    )}
+                    Refuser
                   </Button>
                 </div>
                 <div className="pt-2 border-t border-white/10 space-y-2">
@@ -405,8 +474,18 @@ export default function AdminValidationsPage() {
                     value={infoNote}
                     onChange={(e) => setInfoNote(e.target.value)}
                   />
-                  <Button size="sm" variant="outline" onClick={() => handleInfoRequest(detailUpload)} disabled={!infoNote}>
-                    <Info className="w-4 h-4 mr-1" /> Envoyer la demande d'infos
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleInfoRequest(detailUpload)}
+                    disabled={!infoNote || actionLoading === "info-" + detailUpload.id}
+                  >
+                    {actionLoading === "info-" + detailUpload.id ? (
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    ) : (
+                      <Info className="w-4 h-4 mr-1" />
+                    )}
+                    Envoyer la demande d'infos
                   </Button>
                 </div>
               </div>
