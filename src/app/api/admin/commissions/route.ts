@@ -100,6 +100,57 @@ export async function PATCH(request: NextRequest) {
         message: `Votre commission de ${amount.toLocaleString()} FCFA a été créditée sur votre wallet.`,
       });
     }
+
+    // Payer aussi la commission du parrain si spécifiée
+    if (payload.referrer_commission_id) {
+      const { data: refCommission } = await supabase
+        .from("commissions")
+        .select("user_id, amount, status")
+        .eq("id", payload.referrer_commission_id)
+        .single();
+
+      if (refCommission && refCommission.status !== "paid") {
+        // Marquer la commission du parrain comme payée
+        await supabase
+          .from("commissions")
+          .update({ status: "paid", updated_at: new Date().toISOString() })
+          .eq("id", payload.referrer_commission_id);
+
+        // Créditer le wallet du parrain
+        const { data: refWallet } = await supabase
+          .from("wallets")
+          .select("id, balance, total_earned")
+          .eq("user_id", refCommission.user_id)
+          .single();
+
+        if (refWallet) {
+          const refAmount = Number(refCommission.amount);
+          await supabase
+            .from("wallets")
+            .update({
+              balance: Number(refWallet.balance) + refAmount,
+              total_earned: Number(refWallet.total_earned) + refAmount,
+            })
+            .eq("id", refWallet.id);
+
+          await supabase.from("wallet_transactions").insert({
+            wallet_id: refWallet.id,
+            type: "credit",
+            amount: refAmount,
+            source: "referral",
+            description: `Commission de parrainage payée`,
+            reference_id: payload.referrer_commission_id,
+          });
+
+          await supabase.from("notifications").insert({
+            user_id: refCommission.user_id,
+            type: "commission",
+            title: "Commission de parrainage créditée",
+            message: `Votre commission de parrainage de ${refAmount.toLocaleString()} FCFA a été créditée sur votre wallet.`,
+          });
+        }
+      }
+    }
   }
 
   // Si le statut passe à "rejected", aucune action wallet

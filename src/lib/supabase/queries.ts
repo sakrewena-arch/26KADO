@@ -344,7 +344,7 @@ export async function getAllCommissions() {
     .select("*, user:profiles!commissions_user_id_fkey(*), bookmaker:bookmakers(*)")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return data as Commission[];
+  return data as (Commission & { user_referrer?: Profile | null })[];
 }
 
 export async function getAllUploads() {

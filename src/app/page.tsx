@@ -83,7 +83,7 @@ function EarnMoneyCard({ onEarnClick }: { onEarnClick: () => void }) {
   const { user } = useAuth();
 
   const commission = simPeople * simAmount * 0.25;
-  const bonus = commission * 0.1;
+  const bonus = commission;
 
   const copyCode = () => {
     navigator.clipboard.writeText("26KADO");

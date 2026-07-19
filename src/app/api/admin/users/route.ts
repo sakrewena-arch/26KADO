@@ -16,6 +16,70 @@ function getAdminClient() {
   );
 }
 
+export async function GET(request: NextRequest) {
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll(); },
+        setAll() { /* no-op */ },
+      },
+    }
+  );
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || !["super_admin", "admin", "moderator"].includes(profile.role)) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get("userId");
+  const includeReferrer = searchParams.get("includeReferrer") === "true";
+
+  if (!userId) {
+    // Renvoyer tous les utilisateurs
+    const { data: users } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false });
+    return NextResponse.json({ users });
+  }
+
+  // Récupérer un utilisateur spécifique
+  const { data: userData } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+
+  if (!userData) {
+    return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+  }
+
+  let referrer = null;
+  if (includeReferrer && userData.referred_by) {
+    const { data: refData } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, referral_code")
+      .eq("id", userData.referred_by)
+      .single();
+    referrer = refData;
+  }
+
+  return NextResponse.json({ user: userData, referrer });
+}
+
 export async function PATCH(request: NextRequest) {
   const payload = await request.json().catch(() => null);
 

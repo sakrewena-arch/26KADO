@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { getUploads, createUpload, getBookmakers } from "@/lib/supabase/queries";
 import { formatCurrency, formatDate, getStatusLabel } from "@/lib/utils";
-import { Upload, ImagePlus, X, RefreshCw, AlertCircle } from "lucide-react";
+import { Upload, ImagePlus, X, RefreshCw, AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import { uploadProofImages } from "@/lib/supabase/storage";
 import type { Upload as UploadType, Bookmaker } from "@/types";
 
@@ -28,6 +28,12 @@ export default function ValidationsPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [resubmitUpload, setResubmitUpload] = useState<UploadType | null>(null);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  const showToast = (type: "success" | "error", message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 5000);
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -70,7 +76,7 @@ export default function ValidationsPage() {
 
   const handleSubmit = async (existingId?: string) => {
     if (!bookmakerId || !bookmakerUserId || !depositAmount || !depositDate) return;
-    if (!existingId && selectedFiles.length === 0) return; // Images obligatoires pour une nouvelle soumission
+    if (!existingId && selectedFiles.length === 0) return;
     setIsSubmitting(true);
     try {
       let imageUrls: string[] = [];
@@ -83,7 +89,6 @@ export default function ValidationsPage() {
       }
 
       if (existingId) {
-        // Réponse à une demande d'infos via API publique (pas admin)
         const res = await fetch("/api/uploads/respond", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -113,8 +118,13 @@ export default function ValidationsPage() {
       const updated = await getUploads(user!.id);
       setUploads(updated);
       resetForm();
+      showToast("success", existingId
+        ? "Votre réponse a été envoyée avec succès ! L'équipe 26KADO la vérifiera sous 24 à 48h."
+        : "Votre validation a été soumise avec succès ! Notre équipe vérifiera vos preuves sous 24 à 48h et vous recevrez votre commission après validation."
+      );
     } catch (err) {
       console.error(err);
+      showToast("error", "Une erreur est survenue lors de l'envoi. Veuillez réessayer.");
     }
     setIsSubmitting(false);
   };
@@ -132,6 +142,39 @@ export default function ValidationsPage() {
 
   return (
     <DashboardLayout title="Validations">
+      {/* Toast / Popup de notification */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-[100] animate-in slide-in-from-right-4 fade-in duration-300">
+          <div className={`flex items-start gap-3 p-4 pr-6 rounded-2xl shadow-2xl border backdrop-blur-xl max-w-md ${
+            toast.type === "success"
+              ? "bg-emerald-900/80 border-emerald-500/30 text-emerald-200"
+              : "bg-red-900/80 border-red-500/30 text-red-200"
+          }`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+              toast.type === "success" ? "bg-emerald-500/20" : "bg-red-500/20"
+            }`}>
+              {toast.type === "success" ? (
+                <CheckCircle className="w-6 h-6 text-emerald-400" />
+              ) : (
+                <XCircle className="w-6 h-6 text-red-400" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-semibold ${toast.type === "success" ? "text-emerald-200" : "text-red-200"}`}>
+                {toast.type === "success" ? "Validation envoyée !" : "Erreur"}
+              </p>
+              <p className="text-xs mt-1 opacity-80">{toast.message}</p>
+            </div>
+            <button
+              onClick={() => setToast(null)}
+              className="text-white/50 hover:text-white/90 transition-colors flex-shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Submit Form */}
         <Card>
@@ -153,21 +196,28 @@ export default function ValidationsPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Bookmaker</Label>
-              <select
-                value={bookmakerId}
-                onChange={(e) => setBookmakerId(e.target.value)}
-                className="w-full h-11 rounded-xl border border-white/10 bg-gray-800 px-4 text-sm text-white [&>option]:bg-gray-800 [&>option]:text-white"
-                style={{ colorScheme: 'dark' }}
-                disabled={!!resubmitUpload}
-              >
-                <option value="" className="bg-gray-800 text-white">Sélectionner un bookmaker</option>
-                {bookmakers.length === 0 && (
-                  <option value="" className="bg-gray-800 text-gray-400" disabled>Aucun bookmaker disponible</option>
-                )}
-                {bookmakers.map((bm) => (
-                  <option key={bm.id} value={bm.id} className="bg-gray-800 text-white">{bm.name}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={bookmakerId}
+                  onChange={(e) => setBookmakerId(e.target.value)}
+                  className="w-full h-11 rounded-xl border border-white/10 bg-gray-800/80 px-4 pr-10 text-sm text-white appearance-none cursor-pointer transition-all duration-200 hover:border-blue-500/50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none [&>option]:bg-gray-900 [&>option]:text-white"
+                  style={{ colorScheme: 'dark' }}
+                  disabled={!!resubmitUpload}
+                >
+                  <option value="" disabled className="bg-gray-900 text-gray-400">Sélectionner un bookmaker</option>
+                  {bookmakers.length === 0 && (
+                    <option value="" disabled className="bg-gray-900 text-gray-400">Aucun bookmaker disponible</option>
+                  )}
+                  {bookmakers.map((bm) => (
+                    <option key={bm.id} value={bm.id} className="bg-gray-900 text-white py-2">{bm.name}</option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>4 derniers chiffres ID bookmaker</Label>
@@ -200,7 +250,7 @@ export default function ValidationsPage() {
             <div className="space-y-2">
               <Label>Commentaires {resubmitUpload ? "(obligatoire)" : "(facultatif)"}</Label>
               <textarea
-                className="w-full h-20 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white resize-none"
+                className="w-full h-20 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white resize-none placeholder:text-gray-500 focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"
                 placeholder={resubmitUpload ? "Répondez aux questions de l'administrateur..." : "Ajoutez un commentaire..."}
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
