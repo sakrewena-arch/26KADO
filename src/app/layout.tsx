@@ -29,6 +29,9 @@ export const metadata: Metadata = {
   creator: "26KADO",
   publisher: "26KADO",
   metadataBase: new URL("https://26kado.com"),
+  verification: {
+    google: "6m2e7smg9xDB3Zgxgf7_ChPkUp2WXC2fFY6ghdQconU",
+  },
   openGraph: {
     type: "website",
     locale: "fr_FR",
