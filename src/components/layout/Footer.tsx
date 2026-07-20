@@ -37,7 +37,7 @@ export default function Footer() {
             </p>
             <div className="flex items-center gap-3">
               <a
-                href="https://wa.me/226KADO"
+                href="https://whatsapp.com/channel/0029Vb7OtjLBqbr4XtpvJx0n"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-green-400 transition-all"
@@ -45,7 +45,7 @@ export default function Footer() {
                 <MessageCircle className="w-5 h-5" />
               </a>
               <a
-                href="https://t.me/26kado"
+                href="https://t.me/+Tu64p4Waq2A0MDk0"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-blue-400 transition-all"

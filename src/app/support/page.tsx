@@ -27,15 +27,15 @@ const contactMethods = [
   {
     icon: MessageCircle,
     title: "WhatsApp",
-    value: "Chatter sur WhatsApp",
-    href: "https://wa.me/226KADO",
+    value: "Rejoindre le canal WhatsApp",
+    href: "https://whatsapp.com/channel/0029Vb7OtjLBqbr4XtpvJx0n",
     color: "from-green-500/20 to-emerald-500/20 text-green-400",
   },
   {
     icon: Send,
     title: "Telegram",
-    value: "@26kado",
-    href: "https://t.me/26kado",
+    value: "Rejoindre le groupe Telegram",
+    href: "https://t.me/+Tu64p4Waq2A0MDk0",
     color: "from-blue-400/20 to-indigo-500/20 text-blue-400",
   },
   {
@@ -278,8 +278,8 @@ export default function SupportPage() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-400">WhatsApp</p>
-                      <a href="https://wa.me/226KADO" target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-400 transition-colors">
-                        Chat WhatsApp
+                      <a href="https://whatsapp.com/channel/0029Vb7OtjLBqbr4XtpvJx0n" target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-400 transition-colors">
+                        Rejoindre le canal WhatsApp
                       </a>
                     </div>
                   </div>
@@ -339,7 +339,7 @@ export default function SupportPage() {
               </p>
               <div className="flex items-center justify-center gap-4">
                 <a
-                  href="https://wa.me/226KADO"
+                  href="https://whatsapp.com/channel/0029Vb7OtjLBqbr4XtpvJx0n"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 rounded-xl bg-green-500/20 hover:bg-green-500/30 text-green-400 transition-all"
@@ -347,7 +347,7 @@ export default function SupportPage() {
                   <MessageCircle className="w-6 h-6" />
                 </a>
                 <a
-                  href="https://t.me/26kado"
+                  href="https://t.me/+Tu64p4Waq2A0MDk0"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 transition-all"

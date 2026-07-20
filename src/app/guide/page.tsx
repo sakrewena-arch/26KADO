@@ -6,7 +6,8 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, CheckCircle } from "lucide-react";
+import VideoPlayer from "@/components/VideoPlayer";
+import { ArrowRight, CheckCircle, Play } from "lucide-react";
 
 const steps = [
   {
@@ -76,9 +77,51 @@ export default function GuidePage() {
         </div>
       </section>
 
+      {/* Video Tutorial */}
+      <section className="pb-16">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-8"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-sm text-purple-400 mb-4">
+              <Play className="w-4 h-4" /> Tutoriel vidéo
+            </div>
+            <h2 className="text-3xl font-bold text-white mb-3">
+              Regardez le tutoriel complet
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">
+              Une vidéo pas à pas pour les débutants. Apprenez comment fonctionne la plateforme
+              et comment maximiser vos gains.
+            </p>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <VideoPlayer
+              src="/video/tuto.mp4"
+              title="Tutoriel 26KADO - Comment gagner de l'argent"
+            />
+          </motion.div>
+        </div>
+      </section>
+
       {/* Steps */}
       <section className="pb-24">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-3">
+              Les 6 étapes pour réussir
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">
+              Suivez ces étapes simples pour commencer à gagner des commissions dès aujourd'hui.
+            </p>
+          </div>
           <div className="space-y-12">
             {steps.map((step, i) => (
               <motion.div
