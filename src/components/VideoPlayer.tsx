@@ -157,10 +157,6 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
     }, 3000);
   };
 
-  const handleTouchControls = () => {
-    setShowControls(prev => !prev);
-  };
-
   const skip = (seconds: number) => {
     if (videoRef.current) {
       videoRef.current.currentTime = Math.max(0, Math.min(videoRef.current.currentTime + seconds, duration));
@@ -179,8 +175,8 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
         ref={videoRef}
         src={src}
         poster={poster}
-        className="w-full h-full min-h-[200px] sm:min-h-[300px] md:min-h-[400px] object-contain bg-black cursor-pointer"
-        onClick={isMobile ? handleTouchControls : togglePlay}
+        className="w-full aspect-video object-contain bg-black cursor-pointer"
+        onClick={togglePlay}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onProgress={handleProgress}
@@ -194,16 +190,16 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
 
       {/* Buffering spinner */}
       {isBuffering && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-20 pointer-events-none">
           <div className="w-10 h-10 sm:w-12 sm:h-12 border-3 sm:border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
         </div>
       )}
 
-      {/* Play button overlay (when paused) */}
+      {/* Play button overlay (when paused) - z-30 pour être au-dessus des contrôles */}
       {!isPlaying && !isBuffering && (
         <div
-          className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer z-10"
-          onClick={isMobile ? handleTouchControls : togglePlay}
+          className="absolute inset-0 flex items-center justify-center bg-black/10 cursor-pointer z-30"
+          onClick={isMobile ? (e) => { e.stopPropagation(); if (!isPlaying) togglePlay(); setShowControls(prev => !prev); } : togglePlay}
         >
           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-blue-500/80 backdrop-blur-sm flex items-center justify-center transition-transform hover:scale-110 active:scale-95">
             <Play className="w-8 h-8 sm:w-10 sm:h-10 text-white ml-1" />
@@ -211,9 +207,9 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* Controls bar */}
+      {/* Controls bar - z-10 pour être derrière l'overlay */}
       <div
-        className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent pt-12 sm:pt-16 pb-2 sm:pb-4 px-2 sm:px-4 transition-all duration-300 z-20 ${
+        className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent pt-12 sm:pt-14 pb-2 sm:pb-3 px-2 sm:px-4 transition-all duration-300 z-10 ${
           showControls ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
         }`}
         onClick={(e) => e.stopPropagation()}
@@ -221,7 +217,7 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
         {/* Progress bar */}
         <div
           ref={progressRef}
-          className="relative h-2 sm:h-1.5 bg-white/20 rounded-full cursor-pointer mb-2 sm:mb-4 group/progress hover:h-3 sm:hover:h-2.5 transition-all touch-pan-y"
+          className="relative h-2 sm:h-1.5 bg-white/20 rounded-full cursor-pointer mb-2 sm:mb-3 group/progress transition-all touch-pan-y"
           onClick={handleSeek}
           onTouchMove={handleSeek}
         >
