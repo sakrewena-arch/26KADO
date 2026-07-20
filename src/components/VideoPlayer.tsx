@@ -129,24 +129,19 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
     }
   };
 
-  const toggleFullscreen = async () => {
-    if (!containerRef.current) return;
-    try {
-      if (!document.fullscreenElement) {
-        await containerRef.current.requestFullscreen();
-        setIsFullscreen(true);
-      } else {
-        await document.exitFullscreen();
-        setIsFullscreen(false);
-      }
-    } catch {}
+  const toggleFullscreen = () => {
+    setIsFullscreen(prev => !prev);
   };
 
+  // Empêcher le scroll quand on est en fullscreen custom
   useEffect(() => {
-    const handleFSChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", handleFSChange);
-    return () => document.removeEventListener("fullscreenchange", handleFSChange);
-  }, []);
+    if (isFullscreen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [isFullscreen]);
 
   const handleMouseMove = () => {
     if (isMobile) return;
@@ -166,7 +161,11 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
   return (
     <div
       ref={containerRef}
-      className="relative group rounded-2xl overflow-hidden bg-black shadow-2xl w-full max-w-full"
+      className={`relative group bg-black shadow-2xl w-full max-w-full ${
+        isFullscreen
+          ? "!fixed !inset-0 !z-[9999] !rounded-none !max-w-none !w-screen !h-screen"
+          : "rounded-2xl overflow-hidden"
+      }`}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => isPlaying && !isMobile && setShowControls(false)}
     >
@@ -175,7 +174,11 @@ export default function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
         ref={videoRef}
         src={src}
         poster={poster}
-        className="w-full aspect-video object-contain bg-black cursor-pointer"
+        className={`w-full bg-black cursor-pointer ${
+          isFullscreen
+            ? "!h-full !w-full object-contain"
+            : "aspect-video object-contain"
+        }`}
         onClick={togglePlay}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
