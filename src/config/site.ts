@@ -11,6 +11,7 @@ export const siteConfig = {
     telegram: "https://t.me/26kado",
   },
   promoCode: "26KADO",
+  promoCodeDls3: "DLS3",
   bookmakers: [
     {
       name: "1xBet",
@@ -39,6 +40,36 @@ export const siteConfig = {
       color: "#00e676",
       bonus: "100% jusqu'à 130 000 FCFA",
       promoCode: "26KADO",
+    },
+  ],
+  bookmakersDls3: [
+    {
+      name: "1xBet",
+      slug: "1xbet",
+      color: "#1a5cff",
+      bonus: "100% jusqu'à 200 000 FCFA",
+      promoCode: "DLS3",
+    },
+    {
+      name: "BetWinner",
+      slug: "betwinner",
+      color: "#ff6b00",
+      bonus: "100% jusqu'à 150 000 FCFA",
+      promoCode: "DLS3",
+    },
+    {
+      name: "MelBet",
+      slug: "melbet",
+      color: "#ffd700",
+      bonus: "100% jusqu'à 175 000 FCFA",
+      promoCode: "DLS3",
+    },
+    {
+      name: "LineBet",
+      slug: "linebet",
+      color: "#00e676",
+      bonus: "100% jusqu'à 130 000 FCFA",
+      promoCode: "DLS3",
     },
   ],
   advantages: [

@@ -140,53 +140,109 @@ function EarnMoneyCard({ onEarnClick }: { onEarnClick: () => void }) {
           <p className="text-xl text-gray-300 mb-6 max-w-3xl mx-auto">
             Faites la promotion du site et des codes promo, gagnez 25% de commission sur chaque inscription validée.
           </p>
-          <h2 className="text-3xl lg:text-4xl font-bold text-white mb-2">Votre code promo</h2>
+          <h2 className="text-3xl lg:text-4xl font-bold text-white mb-2">Vos codes promo</h2>
           <p className="text-gray-400 mb-6 max-w-2xl mx-auto">
-            Utilisez le code promo <span className="text-yellow-400 font-bold">26KADO</span> et gagnez des offres et bonus uniques.
+            Utilisez nos codes promo <span className="text-yellow-400 font-bold">26KADO</span> ou <span className="text-purple-400 font-bold">DLS3</span> et gagnez des offres et bonus uniques.
           </p>
-          <div className="max-w-md mx-auto mb-8">
+          <div className="max-w-lg mx-auto mb-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20">
               <div>
                 <p className="text-xs text-gray-500 mb-1">Code promo</p>
-                <p className="text-2xl font-bold font-mono text-yellow-400 tracking-wider">26KADO</p>
+                <p className="text-xl font-bold font-mono text-yellow-400 tracking-wider">26KADO</p>
               </div>
-              <button onClick={copyCode} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 transition-all">
-                {copied ? <><Check className="w-5 h-5" /> Copié</> : <><Copy className="w-5 h-5" /> Copier</>}
+              <button onClick={copyCode} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 transition-all text-sm">
+                {copied ? <><Check className="w-4 h-4" /> Copié</> : <><Copy className="w-4 h-4" /> Copier</>}
+              </button>
+            </div>
+            <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Code promo</p>
+                <p className="text-xl font-bold font-mono text-purple-400 tracking-wider">DLS3</p>
+              </div>
+              <button onClick={() => { navigator.clipboard.writeText("DLS3"); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-all text-sm">
+                {copied ? <><Check className="w-4 h-4" /> Copié</> : <><Copy className="w-4 h-4" /> Copier</>}
               </button>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-          {siteConfig.bookmakers.map((bm, i) => {
-            const bonuses: Record<string, { bonus: string; cashback: string }> = {
-              "1xBet": { bonus: "200% jusqu'à 200 000 FCFA", cashback: "20% cashback sur les pertes" },
-              "BetWinner": { bonus: "200% jusqu'à 150 000 FCFA", cashback: "20% cashback sur les pertes" },
-              "MelBet": { bonus: "200% jusqu'à 175 000 FCFA", cashback: "20% cashback sur les pertes" },
-              "LineBet": { bonus: "200% jusqu'à 130 000 FCFA", cashback: "20% cashback sur les pertes" },
-            };
-            const b = bonuses[bm.name];
-            return (
-              <motion.div key={bm.name} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-                <Card className="h-full flex flex-col text-center">
-                  <div className={`h-2 rounded-t-xl -mx-4 -mt-4 mb-4 bg-gradient-to-r ${bookmakerColors[bm.name]}`} />
-                  <div className="flex flex-col items-center gap-3 flex-1 px-2">
-                    <div className="w-16 h-16 rounded-xl bg-white/10 flex items-center justify-center overflow-hidden">
-                      <img src={`/images/bookmakers/${bm.slug}.jfif`} alt={bm.name} className="w-12 h-12 object-contain" onError={(e) => { const t = e.target as HTMLImageElement; t.style.display = 'none'; const p = t.parentElement; if (p) p.innerHTML = `<span class="text-white font-bold text-xl">${bm.name[0]}</span>`; }} />
+        {/* Section 26KADO */}
+        <div className="mb-6">
+          <h3 className="text-2xl font-bold text-white text-center mb-4">
+            <span className="text-yellow-400">26KADO</span> — Bookmakers programmess
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {siteConfig.bookmakers.map((bm, i) => {
+              const bonuses: Record<string, { bonus: string; cashback: string }> = {
+                "1xBet": { bonus: "200% jusqu'à 200 000 FCFA", cashback: "20% cashback sur les pertes" },
+                "BetWinner": { bonus: "200% jusqu'à 150 000 FCFA", cashback: "20% cashback sur les pertes" },
+                "MelBet": { bonus: "200% jusqu'à 175 000 FCFA", cashback: "20% cashback sur les pertes" },
+                "LineBet": { bonus: "200% jusqu'à 130 000 FCFA", cashback: "20% cashback sur les pertes" },
+              };
+              const b = bonuses[bm.name];
+              return (
+                <motion.div key={bm.name} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
+                  <Card className="h-full flex flex-col text-center">
+                    <div className={`h-2 rounded-t-xl -mx-4 -mt-4 mb-4 bg-gradient-to-r ${bookmakerColors[bm.name]}`} />
+                    <div className="flex flex-col items-center gap-3 flex-1 px-2">
+                      <div className="w-16 h-16 rounded-xl bg-white/10 flex items-center justify-center overflow-hidden">
+                        <img src={`/images/bookmakers/${bm.slug}.jfif`} alt={bm.name} className="w-12 h-12 object-contain" onError={(e) => { const t = e.target as HTMLImageElement; t.style.display = 'none'; const p = t.parentElement; if (p) p.innerHTML = `<span class="text-white font-bold text-xl">${bm.name[0]}</span>`; }} />
+                      </div>
+                      <h3 className="text-lg font-semibold text-white">{bm.name}</h3>
+                      <div className="space-y-1">
+                        <Badge variant="premium" className="text-xs px-2 py-0.5">{b.bonus}</Badge>
+                        <Badge variant="success" className="text-xs px-2 py-0.5 block">{b.cashback}</Badge>
+                      </div>
                     </div>
-                    <h3 className="text-lg font-semibold text-white">{bm.name}</h3>
-                    <div className="space-y-1">
-                      <Badge variant="premium" className="text-xs px-2 py-0.5">{b.bonus}</Badge>
-                      <Badge variant="success" className="text-xs px-2 py-0.5 block">{b.cashback}</Badge>
+                    <a href={affiliateLinks[bm.name]} target="_blank" rel="noopener noreferrer" className="mt-4">
+                      <Button className="w-full" variant="default" size="sm">S'inscrire maintenant <ExternalLink className="ml-2 w-4 h-4" /></Button>
+                    </a>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Section DLS3 */}
+        <div className="mb-10">
+          <h3 className="text-2xl font-bold text-white text-center mb-4">
+            <span className="text-purple-400">DLS3</span> — Bookmakers programmess
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {siteConfig.bookmakersDls3.map((bm, i) => {
+              const bonuses: Record<string, { bonus: string; cashback: string }> = {
+                "1xBet": { bonus: "200% jusqu'à 200 000 FCFA", cashback: "20% cashback sur les pertes" },
+                "BetWinner": { bonus: "200% jusqu'à 150 000 FCFA", cashback: "20% cashback sur les pertes" },
+                "MelBet": { bonus: "200% jusqu'à 175 000 FCFA", cashback: "20% cashback sur les pertes" },
+                "LineBet": { bonus: "200% jusqu'à 130 000 FCFA", cashback: "20% cashback sur les pertes" },
+              };
+              const b = bonuses[bm.name];
+              return (
+                <motion.div key={`dls3-${bm.name}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
+                  <Card className="h-full flex flex-col text-center border-purple-500/20">
+                    <div className={`h-2 rounded-t-xl -mx-4 -mt-4 mb-4 bg-gradient-to-r ${bookmakerColors[bm.name]}`} />
+                    <div className="flex flex-col items-center gap-3 flex-1 px-2">
+                      <div className="w-16 h-16 rounded-xl bg-white/10 flex items-center justify-center overflow-hidden">
+                        <img src={`/images/bookmakers/${bm.slug}.jfif`} alt={bm.name} className="w-12 h-12 object-contain" onError={(e) => { const t = e.target as HTMLImageElement; t.style.display = 'none'; const p = t.parentElement; if (p) p.innerHTML = `<span class="text-white font-bold text-xl">${bm.name[0]}</span>`; }} />
+                      </div>
+                      <h3 className="text-lg font-semibold text-white">{bm.name}</h3>
+                      <Badge variant="premium" className="text-xs bg-purple-500/20 text-purple-400 border-purple-500/30">
+                        Code: DLS3
+                      </Badge>
+                      <div className="space-y-1">
+                        <Badge variant="premium" className="text-xs px-2 py-0.5">{b.bonus}</Badge>
+                        <Badge variant="success" className="text-xs px-2 py-0.5 block">{b.cashback}</Badge>
+                      </div>
                     </div>
-                  </div>
-                  <a href={affiliateLinks[bm.name]} target="_blank" rel="noopener noreferrer" className="mt-4">
-                    <Button className="w-full" variant="default" size="sm">S'inscrire maintenant <ExternalLink className="ml-2 w-4 h-4" /></Button>
-                  </a>
-                </Card>
-              </motion.div>
-            );
-          })}
+                    <a href={affiliateLinks[bm.name]} target="_blank" rel="noopener noreferrer" className="mt-4">
+                      <Button className="w-full" variant="default" size="sm">S'inscrire maintenant <ExternalLink className="ml-2 w-4 h-4" /></Button>
+                    </a>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
 
         <div className="mb-10">

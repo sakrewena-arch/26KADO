@@ -260,25 +260,37 @@ export default function BookmakersPage() {
               Bookmakers programmess
             </Badge>
             <h1 className="text-4xl lg:text-6xl font-bold text-white mb-4">
-              Inscrivez-vous avec le code <span className="text-gradient">26KADO</span>
+              Inscrivez-vous avec nos codes promo
             </h1>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
               Profitez des meilleures offres de bienvenue sur les bookmakers partenaires.
-              Utilisez notre code promo exclusif et recevez des bonus exceptionnels.
+              Utilisez nos codes promo exclusifs et recevez des bonus exceptionnels.
             </p>
 
-            {/* Code promo global */}
-            <div className="max-w-md mx-auto mb-8">
+            {/* Codes promo globaux */}
+            <div className="max-w-lg mx-auto mb-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20">
                 <div className="text-left">
-                  <p className="text-xs text-gray-500 mb-1">Code promo unique</p>
-                  <p className="text-2xl font-bold font-mono text-yellow-400 tracking-wider">26KADO</p>
+                  <p className="text-xs text-gray-500 mb-1">Code promo</p>
+                  <p className="text-xl font-bold font-mono text-yellow-400 tracking-wider">26KADO</p>
                 </div>
                 <button
-                  onClick={copyGlobalCode}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 transition-all"
+                  onClick={() => { navigator.clipboard.writeText("26KADO"); setCopiedGlobal(true); setTimeout(() => setCopiedGlobal(false), 2000); }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 transition-all text-sm"
                 >
-                  {copiedGlobal ? <><Check className="w-5 h-5" /> Copié</> : <><Copy className="w-5 h-5" /> Copier</>}
+                  {copiedGlobal ? <><Check className="w-4 h-4" /> Copié</> : <><Copy className="w-4 h-4" /> Copier</>}
+                </button>
+              </div>
+              <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+                <div className="text-left">
+                  <p className="text-xs text-gray-500 mb-1">Code promo</p>
+                  <p className="text-xl font-bold font-mono text-purple-400 tracking-wider">DLS3</p>
+                </div>
+                <button
+                  onClick={() => { navigator.clipboard.writeText("DLS3"); setCopiedGlobal(true); setTimeout(() => setCopiedGlobal(false), 2000); }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-all text-sm"
+                >
+                  {copiedGlobal ? <><Check className="w-4 h-4" /> Copié</> : <><Copy className="w-4 h-4" /> Copier</>}
                 </button>
               </div>
             </div>
@@ -308,12 +320,37 @@ export default function BookmakersPage() {
         </div>
       </section>
 
-      {/* Liste des bookmakers */}
+      {/* Liste des bookmakers - Code 26KADO */}
       <section className="pb-16 lg:pb-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          {siteConfig.bookmakers.map((bm) => (
-            <BookmakerCard key={bm.name} {...bm} />
-          ))}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-white mb-2">
+              Avec le code <span className="text-yellow-400">26KADO</span>
+            </h2>
+            <p className="text-gray-400">Profitez des offres exclusives avec le code promo 26KADO</p>
+          </div>
+          <div className="space-y-8">
+            {siteConfig.bookmakers.map((bm) => (
+              <BookmakerCard key={bm.name} {...bm} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Liste des bookmakers - Code DLS3 */}
+      <section className="pb-16 lg:pb-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-white mb-2">
+              Avec le code <span className="text-purple-400">DLS3</span>
+            </h2>
+            <p className="text-gray-400">Profitez des mêmes offres avec le code promo DLS3</p>
+          </div>
+          <div className="space-y-8">
+            {siteConfig.bookmakersDls3.map((bm) => (
+              <BookmakerCard key={`dls3-${bm.name}`} {...bm} />
+            ))}
+          </div>
         </div>
       </section>
 
